@@ -16,7 +16,8 @@
     "proev": "npm run proev --prefix api",
     "forbered": "node verktoy/forbered.mjs",
     "dev:kun-swa": "npm run build --prefix api && swa start",
-    "sjekk": "node verktoy/sjekk.mjs"
+    "sjekk": "node verktoy/sjekk.mjs",
+    "dev:enkel": "npm run build --prefix api && node verktoy/dev-enkel.mjs"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^2.0.10",

@@ -97,6 +97,23 @@ faktisk har: tynt før 1950, fire til ti år per tiår etterpå.
 
 Vil du styre Azurite selv, finnes `npm run azurite` og `npm run dev:kun-swa`.
 
+### Reservevei uten Functions Core Tools
+
+Får du ikke `func` til å kjøre, stopper ikke utviklingen opp:
+
+```bash
+npm run dev:enkel
+```
+
+Den starter Azurite, en enkel lokal API-tjener og Vite — ingen Functions Core
+Tools, ingen Static Web Apps CLI. Åpne **<http://127.0.0.1:5173>**.
+
+API-tjeneren (`api/lokal-tjener.mjs`) laster de samme handlerne som Functions
+ville kjørt, så ruting, validering, sanitering og SAS er identisk — det er den
+samme koden. Men den etterligner ikke Functions-vertens oppstart, den har ingen
+bindings utover HTTP, og den kjenner ikke SWA-ens rutefil. **Bruk `npm run dev`
+når `func` virker.** Denne finnes for at arbeidet skal kunne fortsette imens.
+
 ### Hvis noe klikker
 
 Kjør forhåndssjekken først — den går gjennom Node-versjon, `func`, avhengigheter,
@@ -143,6 +160,7 @@ den dagen noen legger inn en. Derfor lages den av `npm run installer` fra
 |---|---|
 | `npm run dev` | Azurite, bygger API-et, og starter SWA CLI — alt i ett |
 | `npm run dev:kun-swa` | Samme uten Azurite, hvis du vil styre den selv |
+| `npm run dev:enkel` | Reservevei: Azurite + lokal API-tjener + Vite, uten `func` og SWA CLI |
 | `npm run seed` | Legger eksempeldata i Azurite |
 | `npm run seed:sky` | Samme, men mot Azure (henter nøkkel via `az`) |
 | `npm run proev` | Røykprøve av API-et mot Azurite |
