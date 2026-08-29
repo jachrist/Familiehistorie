@@ -22,13 +22,37 @@ Kort oppsummert:
   redigeringsskjemaet og visningen genereres fra den — nye felter kan legges til uten
   kodeendring.
 - **Søk i nettleseren.** Forsiden laster indeksdokumentet uansett, så søket kjøres lokalt
-  og filtrerer årslisten uten nettverkskall. Skalerer langt forbi det dette prosjektet trenger.
+  og filtrerer årslisten uten nettverkskall.
 - **Media direkte til Blob** via kortlevde SAS-URL-er, utenom API-et. Nødvendig for video,
-  og gjør bildeopplasting rask.
-- **Anbefaling: hele nettstedet bak innlogging.** Innholdet handler om levende
-  familiemedlemmer, og et åpent nettsted lar seg i praksis ikke angre.
-- **Fase 1 gir et fullt brukbart nettsted** på anslagsvis 5–8 arbeidsdager. Tidslinje,
-  persontagging og PDF-eksport er bevisst holdt utenfor.
+  og holder videotrafikken utenfor Static Web Apps-kvoten.
+- **Hele nettstedet bak innlogging**, med egendefinert rolle `familie` — ikke den
+  innebygde `authenticated`, som ville sluppet inn hvem som helst med en Microsoft-konto.
+- **Fase 1 gir et fullt brukbart nettsted** på anslagsvis 6–9 arbeidsdager.
 
-Punktene som bør avklares før koding starter er samlet i
-[§2 i dokumentet](docs/omfang-og-arkitektur.md#åpne-spørsmål-som-bør-avklares-før-koding).
+### Dimensjonering
+Omfanget er avklart: ~160 års spenn, **rundt 90 årssider**, 5–10 minutter video per år
+(**~11 timer** totalt) og **~2 250 bilder**. Én redaktør. Alt materiale klippes og lastes
+inn manuelt, fra hver enkelt årsside.
+
+Det gir to konkrete konsekvenser for byggingen:
+
+- **Video må transkodes før opplasting.** Forskjellen mellom råfiler og 1080p H.264 er
+  2,5 TB mot 30 GB. Klippingen skal uansett gjøres manuelt, så transkodingen legges inn i
+  samme operasjon — [ferdig `ffmpeg`-kommando i §11](docs/omfang-og-arkitektur.md#video).
+- **Masseopplasting og EXIF-avlesning er flyttet inn i fase 1.** Med 2 250 bilder er det
+  forskjellen på en overkommelig og en uutholdelig jobb.
+
+Søket, datamodellen og kostnadsbildet holder som beskrevet — samlet lagring lander på
+~35–50 GB, altså rundt 1 USD i måneden.
+
+### Innlogging: tenant og lisens
+Kort svar: **ingen lisens kreves** — Entra External ID er gratis for de første 50 000
+månedlig aktive brukerne, og det trengs ingen P1-lisens per gjest. Men med Entra-innlogging
+blir familiemedlemmene **gjestebrukere i tenanten din**, som er gratis, men reell
+administrasjon.
+
+Anbefalingen er å starte på gratisplanen med forhåndskonfigurert Entra ID og invitasjoner
+— den tar imot enhver Microsoft-konto, også personlig `outlook.com`. Taket er 25 brukere
+med egendefinert rolle; passeres det, byttes det til Standard-planen med en egen
+`getRoles`-funksjon. Detaljer og kilder i
+[§9](docs/omfang-og-arkitektur.md#9-autentisering-og-personvern).
