@@ -99,6 +99,24 @@ Vil du styre Azurite selv, finnes `npm run azurite` og `npm run dev:kun-swa`.
 
 ### Hvis noe klikker
 
+Kjør forhåndssjekken først — den går gjennom Node-versjon, `func`, avhengigheter,
+`local.settings.json` og porter, og sier hva som er galt:
+
+```bash
+npm run sjekk
+```
+
+**Vil du se den ekte feilen fra Functions**, kjør `func` alene, med Azurite oppe:
+
+```bash
+npm run azurite        # skall 1
+cd api && func start --verbose    # skall 2
+```
+
+`func start` uten Azurite gir «Exception has been thrown by the target of an
+invocation», som ikke sier noe om årsaken. `--verbose` gir resten.
+
+
 | Symptom | Årsak og fiks |
 |---|---|
 | `ENOENT … Could not read package.json` | Du står ikke i repo-rota. Klonet du inn i en mappe du laget selv, ligger repoet ett nivå ned. `dir package.json` (Windows) eller `ls package.json` bekrefter |
@@ -128,6 +146,7 @@ den dagen noen legger inn en. Derfor lages den av `npm run installer` fra
 | `npm run proev` | Røykprøve av API-et mot Azurite |
 | `npm run build` | Bygger `api/` og `app/` |
 | `npm run typecheck` | Typesjekker begge uten å bygge |
+| `npm run sjekk` | Forhåndssjekk: Node, `func`, avhengigheter, innstillinger, porter |
 | `npm run forbered` | Lager `api/local.settings.json` hvis den mangler |
 | `npm run clean` | Fjerner byggeutdata og lokal lagring |
 

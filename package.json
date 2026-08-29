@@ -7,7 +7,7 @@
   "scripts": {
     "installer": "npm install --prefix app && npm install --prefix api && npm run forbered",
     "azurite": "azurite --silent --location .azurite --skipApiVersionCheck",
-    "dev": "npm run build --prefix api && concurrently --names \"azurite,swa\" --prefix-colors \"gray,cyan\" --kill-others \"npm:azurite\" \"swa start\"",
+    "dev": "npm run build --prefix api && node verktoy/dev.mjs",
     "seed": "node verktoy/seed.mjs",
     "seed:sky": "node verktoy/seed-sky.mjs",
     "build": "npm run build --prefix api && npm run build --prefix app",
@@ -15,7 +15,8 @@
     "clean": "node -e \"for (const m of ['app/dist','api/dist','.azurite','.swa']) require('node:fs').rmSync(m,{recursive:true,force:true})\"",
     "proev": "npm run proev --prefix api",
     "forbered": "node verktoy/forbered.mjs",
-    "dev:kun-swa": "npm run build --prefix api && swa start"
+    "dev:kun-swa": "npm run build --prefix api && swa start",
+    "sjekk": "node verktoy/sjekk.mjs"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^2.0.10",
