@@ -810,3 +810,108 @@ code {
     justify-content: flex-end;
   }
 }
+
+/* ===================================================================
+   Trinn 8 — søk
+   =================================================================== */
+
+.sok {
+  margin: 26px 0 0;
+}
+.sok-boks {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: var(--flate);
+  border: 1px solid var(--strek);
+  border-radius: 8px;
+}
+.sok-boks:focus-within {
+  outline: 2px solid var(--aksent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.sok-ikon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--blekk-matt);
+}
+.sok-boks input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 16px;
+  padding: 12px 0;
+  border: 0;
+  background: none;
+  color: var(--blekk);
+}
+.sok-boks input:focus {
+  outline: none;
+}
+/* Nettleserens eget kryss i type=search duplirerer vår egen knapp. */
+.sok-boks input::-webkit-search-cancel-button {
+  display: none;
+}
+.sok-tom {
+  flex: none;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--blekk-matt);
+  cursor: pointer;
+}
+.sok-tom:hover {
+  background: var(--flate-2);
+  color: var(--blekk);
+}
+.sok-tom:focus-visible {
+  outline: 2px solid var(--aksent);
+  outline-offset: 1px;
+}
+.sok-status {
+  margin: 7px 2px 0;
+  font-size: 12.5px;
+  color: var(--blekk-matt);
+  font-variant-numeric: tabular-nums;
+}
+
+mark {
+  background: var(--aksent-svak);
+  color: var(--blekk);
+  padding: 0 1px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.aar-utdrag {
+  margin: 0;
+  padding: 0 16px 13px calc(3.6ch + 32px);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--blekk-svak);
+  max-width: 72ch;
+}
+
+/* Resultatlisten tones inn, så filtrering ikke oppleves som et hopp. */
+.tiaar {
+  animation: tone-inn 0.18s ease-out both;
+}
+@keyframes tone-inn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tiaar {
+    animation: none;
+  }
+}

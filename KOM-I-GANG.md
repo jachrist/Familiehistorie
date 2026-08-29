@@ -1,6 +1,6 @@
 # Kom i gang
 
-Status: **fase 1, trinn 1–7** av [faseplanen](docs/omfang-og-arkitektur.md#14-faseplan).
+Status: **fase 1, trinn 1–8** av [faseplanen](docs/omfang-og-arkitektur.md#14-faseplan).
 
 > **Nettstedet har ingen innlogging ennå.** Den kommer i trinn 9. Alt som legges
 > inn før den er på plass, er lesbart for enhver som finner adressen. Ikke last
@@ -233,9 +233,13 @@ hvert par sekunder, med gjenoppretting. ETag-konflikt håndteres eksplisitt.
 årstall. Skrive-SAS for hele bunken i ett kall, tre opplastinger parallelt,
 fremdrift per fil, blokkvis over 8 MB. Bildetekstliste med rekkefølge.
 
+**Trinn 8 — søk.** Søkefelt på forsiden som filtrerer årslisten mens du skriver.
+Kjøres i nettleseren mot indeksdokumentet, så ingen nettverkskall per tastetrykk.
+Prefiks, toleranse for skrivefeil, og både «sørlandet» og «sorlandet». Hvert
+treff viser et utdrag rundt treffordet. `/` setter markøren i feltet, Esc tømmer.
+
 ## Hva som bevisst ikke virker ennå
 
-- **Søk** — trinn 8. Indeksdokumentet inneholder allerede den søkbare teksten.
 - **Innlogging** — trinn 9. `api/src/vakt.ts` har formen på plass og slipper alt
   gjennom; konstanten `INNLOGGING_MANGLER` markerer stedet.
 

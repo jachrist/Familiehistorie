@@ -108,10 +108,6 @@ async function skriv(container, sti, verdi) {
     });
 }
 
-function flat(html) {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
 async function main() {
   for (const navn of ["innhold", "media", "originaler"]) {
     await tjeneste.getContainerClient(navn).createIfNotExists();
@@ -126,21 +122,14 @@ async function main() {
   }
   console.log(`✓ ${dokumenter.length} årsdokumenter`);
 
-  const indeks = {
-    generert: new Date().toISOString(),
-    aar: dokumenter
-      .map((d) => ({
-        aar: d.aar,
-        tittel: d.felter.tittel ?? "",
-        sammendrag: d.felter.sammendrag ?? "",
-        antallBilder: 0,
-        antallVideoer: 0,
-        sok: [String(d.aar), ...Object.values(d.felter).map(flat)].join(" ").toLowerCase(),
-      }))
-      .sort((a, b) => b.aar - a.aar),
-  };
-  await skriv("innhold", "indeks.json", indeks);
-  console.log("✓ indeks.json");
+  // indeks.json skrives ikke her. API-et bygger den ved første oppslag hvis den
+  // mangler, og da finnes logikken bare ett sted – den lå tidligere duplisert
+  // her, og kom ut av takt med api/src/indeksBygger.ts.
+  await tjeneste
+    .getContainerClient("innhold")
+    .getBlockBlobClient("indeks.json")
+    .deleteIfExists();
+  console.log("✓ indeks.json bygges av API-et ved første oppslag");
 
   console.log(`\nFerdig mot ${TILKOBLING.includes("UseDevelopmentStorage") ? "Azurite" : "Azure"}.`);
 }

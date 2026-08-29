@@ -10,7 +10,7 @@ I tillegg skal det være en søkeboks der en kan søke i alle tekster på sidene
 Jeg ønsker å benytte min vanlige arkitektur - Azure Static Web app for sider, api-lag, lagring i Blob storage.
 
 ### Status
-**Fase 1, trinn 1–7 er bygget.** Oppsett, kommandoer og hva som virker:
+**Fase 1, trinn 1–8 er bygget.** Oppsett, kommandoer og hva som virker:
 [KOM-I-GANG.md](KOM-I-GANG.md).
 
 Krever **Node 22** — nøyaktig 22, siden Azure Functions ikke støtter Node 24 —
@@ -33,8 +33,9 @@ npm run seed        # skall 2: eksempeldata, første gang
 - **Trinn 5** — årsside med tekstfelter og mediegalleri
 - **Trinn 6** — redigering: skjema generert fra `felter.json`, rik tekst, autolagring
 - **Trinn 7** — masseopplasting med nedskalering, EXIF, fremdrift og bildetekstliste
+- **Trinn 8** — søk i nettleseren som filtrerer årslisten, med utdrag rundt treffet
 
-Trinn 8–11 gjenstår. `npm run proev` kjører en røykprøve av API-et mot Azurite.
+Trinn 9–11 gjenstår. `npm run proev` kjører en røykprøve av API-et mot Azurite.
 
 > **Ingen innlogging før trinn 9.** Ikke last opp ekte familiebilder ennå.
 

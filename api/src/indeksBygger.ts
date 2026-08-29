@@ -33,9 +33,14 @@ export function lagRad(dok: Aarsdokument, skjema: Feltskjema): Indeksrad {
     sammendrag: flat(dok.felter.sammendrag ?? "").slice(0, 400),
     antallBilder: dok.media.filter((m) => m.type === "bilde").length,
     antallVideoer: dok.media.filter((m) => m.type === "video").length,
-    // Søket i trinn 8 leser dette feltet. Bildetekster tas med – de er ofte det
-    // eneste stedet et navn eller sted er nevnt.
-    sok: [String(dok.aar), ...tekster, ...bildetekster].join(" ").toLowerCase(),
+    // Søket leser dette feltet. Bildetekster tas med – de er ofte det eneste
+    // stedet et navn eller sted er nevnt.
+    //
+    // Naturlig store og små bokstaver beholdes, selv om søket er ufølsomt for
+    // dem: teksten brukes også til å vise utdrag rundt treffet, og et utdrag i
+    // bare småbokstaver ser ødelagt ut. Feltene skilles med «·» slik at utdrag
+    // ikke løper sammen på tvers av felter.
+    sok: [String(dok.aar), ...tekster, ...bildetekster].join(" · "),
   };
 }
 

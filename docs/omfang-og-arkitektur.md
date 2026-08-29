@@ -221,7 +221,7 @@ atomisk skriving, og et år kan sikkerhetskopieres eller gjenopprettes for seg.
       "sammendrag": "Året vi pakket ned huset på Hamar …",
       "antallBilder": 14,
       "antallVideoer": 1,
-      "sok": "flyttingen til bergen året vi pakket ned huset på hamar …"  // all tekst, flatet ut og normalisert
+      "sok": "1972 · Flyttingen til Bergen · Året vi pakket ned huset på Hamar …"
     }
   ]
 }
@@ -229,7 +229,11 @@ atomisk skriving, og et år kan sikkerhetskopieres eller gjenopprettes for seg.
 
 Ved ~90 år blir indeksen rundt 360 kB. Den bygges om av API-et hver gang et år lagres,
 og er avledet data — kan alltid gjenskapes fra årsdokumentene via
-`POST /api/vedlikehold/bygg-indeks`.
+`POST /api/vedlikehold/bygg-indeks`. Mangler den, bygges den ved første oppslag.
+
+`sok` beholder naturlig store og små bokstaver, selv om søket er ufølsomt for dem:
+teksten brukes også til å vise utdrag rundt treffet, og et utdrag i bare småbokstaver
+ser ødelagt ut. Feltene skilles med «·» slik at utdrag ikke løper sammen på tvers av dem.
 
 ---
 
@@ -381,11 +385,16 @@ Kravet er beskjedent — «bare årstall med match vises» — og datamengden er
 inneholder all søkbar tekst. Søket kjøres lokalt med
 [MiniSearch](https://github.com/lucaong/minisearch) (~10 kB gzip):
 
-- prefiksmatch, så «berg» treffer «Bergen»
-- innebygd fuzzy-toleranse for skrivefeil — viktigere enn man tror ved slekts- og stedsnavn
-- norsk normalisering: småbokstaver, men **æ/ø/å beholdes** — de skal ikke strippes til ae/oe/aa
-- treff rangeres, og år uten treff skjules med en myk animasjon
-- resultatet viser hvilket felt treffet kom fra, med utheving i konteksten
+- prefiksmatch, så «berg» treffer «Bergen» og «197» hele tiåret
+- fuzzy-toleranse for skrivefeil — viktigere enn man tror ved slekts- og stedsnavn
+- **men ikke på tall.** Med toleranse ga «1972» også 1974, 1976 og 1952, siden de er
+  én endring unna. Skriver man et årstall, mener man det årstallet
+- **æ, ø og å beholdes** i den indekserte formen — men en foldet variant indekseres
+  i tillegg, slik at både «sørlandet» og «sorlandet» treffer
+- treff rangeres, med vekt på tittel og ingress
+- år uten treff skjules, tomme tiår kollapser, og resultatet tones inn
+- hvert treff viser et **utdrag rundt treffordet**, så man ser hvorfor året kom med.
+  Årstall og tittel klippes bort, siden raden allerede viser dem
 
 **Med det kjente volumet:** ~90 år à 4 kB tekst gir en indeks på ~360 kB. Det er godt
 innenfor. Ingen dimensjonering nødvendig, og ingen søketjeneste å betale for.

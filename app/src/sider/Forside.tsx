@@ -1,11 +1,13 @@
-import { useMemo, useRef } from "react";
+import { useDeferredValue, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import type { Indeksrad } from "../../../delt/typer.js";
 import { Apifeil, api, noekler } from "../api/klient.js";
 import { AarRad } from "../komponenter/AarRad.js";
+import { Sokefelt } from "../komponenter/Sokefelt.js";
 import { TiaarsGruppe } from "../komponenter/TiaarsGruppe.js";
+import { byggSokeindeks, sok } from "../sok/soek.js";
 
 interface Gruppe {
   tiaar: number;
@@ -27,6 +29,9 @@ function grupperPaaTiaar(rader: Indeksrad[]): Gruppe[] {
 
 export function Forside() {
   const tilstand = useQuery({ queryKey: noekler.indeks, queryFn: api.indeks });
+  const [spoersmaal, settSpoersmaal] = useState("");
+  // Feltet skal svare umiddelbart selv om filtreringen ligger et hakk bak.
+  const utsatt = useDeferredValue(spoersmaal);
   const { aar: aarParam } = useParams();
   const naviger = useNavigate();
 
@@ -36,10 +41,33 @@ export function Forside() {
 
   const apentAar = aarParam ? Number(aarParam) : undefined;
 
-  const grupper = useMemo(
-    () => (tilstand.data ? grupperPaaTiaar(tilstand.data.aar) : []),
-    [tilstand.data]
+  const alle = tilstand.data?.aar;
+
+  // Søkeindeksen bygges én gang per indeksdokument, ikke per tastetrykk.
+  const sokeindeks = useMemo(() => (alle ? byggSokeindeks(alle) : undefined), [alle]);
+
+  const treff = useMemo(
+    () => (sokeindeks && utsatt.trim() !== "" ? sok(sokeindeks, utsatt) : undefined),
+    [sokeindeks, utsatt]
   );
+
+  /** Årstall til ordene som traff. `undefined` når det ikke søkes. */
+  const treffkart = useMemo(() => {
+    if (!treff) return undefined;
+    return new Map(treff.map((t) => [t.aar, t.ord]));
+  }, [treff]);
+
+  const grupper = useMemo(() => {
+    if (!alle) return [];
+    const synlige = treffkart ? alle.filter((r) => treffkart.has(r.aar)) : alle;
+    return grupperPaaTiaar(synlige);
+  }, [alle, treffkart]);
+
+  const sokestatus = !alle
+    ? ""
+    : treffkart
+      ? `${treffkart.size} av ${alle.length} år`
+      : `${alle.length} år`;
 
   function veksle(aar: number) {
     // Utfoldingen bytter ikke side, men oppdaterer URL-en, slik at
@@ -60,6 +88,10 @@ export function Forside() {
         </div>
       </header>
 
+      {tilstand.isSuccess && (alle?.length ?? 0) > 0 && (
+        <Sokefelt verdi={spoersmaal} onEndret={settSpoersmaal} status={sokestatus} />
+      )}
+
       {tilstand.isPending && (
         <p className="beskjed" role="status">
           Henter årene …
@@ -77,7 +109,16 @@ export function Forside() {
         </div>
       )}
 
-      {tilstand.isSuccess && grupper.length === 0 && (
+      {tilstand.isSuccess && grupper.length === 0 && treffkart && (
+        <div className="beskjed">
+          <p>Ingen år nevner «{spoersmaal.trim()}».</p>
+          <p className="beskjed-hjelp">
+            Søket dekker alle tekstfelter og bildetekster. Prøv færre eller kortere ord.
+          </p>
+        </div>
+      )}
+
+      {tilstand.isSuccess && grupper.length === 0 && !treffkart && (
         <div className="beskjed">
           <p>Ingen år er lagt inn ennå.</p>
           <p className="beskjed-hjelp">
@@ -95,6 +136,7 @@ export function Forside() {
               rad={rad}
               apen={apentAar === rad.aar}
               rullTil={forsteAapne.current === rad.aar}
+              trefford={treffkart?.get(rad.aar) ?? []}
               onVeksle={() => veksle(rad.aar)}
             />
           ))}
@@ -102,7 +144,7 @@ export function Forside() {
       ))}
 
       <footer className="bunn">
-        <p>Trinn 1–7 av fase 1. Søk kommer i trinn 8, innlogging i trinn 9.</p>
+        <p>Trinn 1–8 av fase 1. Innlogging kommer i trinn 9.</p>
       </footer>
     </main>
   );
