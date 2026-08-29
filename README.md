@@ -25,9 +25,9 @@ Kort oppsummert:
   og filtrerer årslisten uten nettverkskall.
 - **Media direkte til Blob** via kortlevde SAS-URL-er, utenom API-et. Nødvendig for video,
   og holder videotrafikken utenfor Static Web Apps-kvoten.
-- **Hele nettstedet bak innlogging**, med egendefinert rolle `familie` — ikke den
-  innebygde `authenticated`, som ville sluppet inn hvem som helst med en Microsoft-konto.
-- **Fase 1 gir et fullt brukbart nettsted** på anslagsvis 6–9 arbeidsdager.
+- **Alt innhold bak innlogging med engangskode på e-post**, etter samme mønster som våre
+  øvrige løsninger. Roller styres fra en tilgangsliste som redigeres i appen.
+- **Fase 1 gir et fullt brukbart nettsted** på anslagsvis 7–10 arbeidsdager.
 
 ### Dimensjonering
 Omfanget er avklart: ~160 års spenn, **rundt 90 årssider**, 5–10 minutter video per år
@@ -45,14 +45,18 @@ Det gir to konkrete konsekvenser for byggingen:
 Søket, datamodellen og kostnadsbildet holder som beskrevet — samlet lagring lander på
 ~35–50 GB, altså rundt 1 USD i måneden.
 
-### Innlogging: tenant og lisens
-Kort svar: **ingen lisens kreves** — Entra External ID er gratis for de første 50 000
-månedlig aktive brukerne, og det trengs ingen P1-lisens per gjest. Men med Entra-innlogging
-blir familiemedlemmene **gjestebrukere i tenanten din**, som er gratis, men reell
-administrasjon.
+### Innlogging
+Innlogging skjer med **engangskode på e-post**, etter samme mønster som våre øvrige
+løsninger, og sesjonen lagres i nettleseren. Det fjerner hele tenant-, lisens- og
+plandiskusjonen: ingen brukere i tenanten, ingen lisenser, intet tak på antall lesere, og
+gratisplanen holder uansett hvor mange familien blir.
 
-Anbefalingen er å starte på gratisplanen med forhåndskonfigurert Entra ID og invitasjoner
-— den tar imot enhver Microsoft-konto, også personlig `outlook.com`. Taket er 25 brukere
-med egendefinert rolle; passeres det, byttes det til Standard-planen med en egen
-`getRoles`-funksjon. Detaljer og kilder i
-[§9](docs/omfang-og-arkitektur.md#9-autentisering-og-personvern).
+Én ting endrer seg strukturelt: **`allowedRoles` i `staticwebapp.config.json` slutter å
+virke**, siden Static Web Apps ikke kjenner et token vi utsteder selv. All adgangskontroll
+flytter inn i Functions-laget, der hvert endepunkt validerer sesjonen. App-skallet blir
+dermed offentlig hentbart — det inneholder ingenting, men trenger `noindex` og en
+`robots.txt`. Mediehåndteringen med kortlevde SAS-URL-er er uendret.
+
+To ting blir viktigere enn de var: **sanitering av rik tekst server-side**, som nå er den
+bærende sikkerhetskontrollen snarere enn hygiene, og **rate-limiting av engangskoder**.
+Detaljer i [§9](docs/omfang-og-arkitektur.md#9-autentisering-og-personvern).

@@ -19,8 +19,11 @@ Teknisk: Azure Static Web Apps (React-frontend) + Azure Functions (API) +
 Azure Blob Storage (både innhold og media). Ingen database — hvert år lagres som ett
 JSON-dokument i Blob, med et lite indeksdokument som driver forside og søk.
 
-**Estimert innsats til produksjonsklar MVP: ca. 6–9 arbeidsdager.**
-**Estimert driftskostnad: ca. 1–2 USD/mnd** på gratisplanen (se [§13](#kostnad)).
+**Estimert innsats til produksjonsklar MVP: ca. 7–10 arbeidsdager.**
+**Estimert driftskostnad: ca. 1 USD/mnd** på gratisplanen (se [§13](#kostnad)).
+
+Innlogging skjer med **engangskode på e-post**, etter samme mønster som deres øvrige
+løsninger. Det fjerner både tenant-, lisens- og plandiskusjonen ([§9](#9-autentisering-og-personvern)).
 
 Dimensjoneringen er nå kjent: rundt 90 årssider, ~11 timer ferdig klippet video og
 ~2 000–2 500 bilder. Det er godt innenfor det arkitekturen over tåler — med ett unntak
@@ -44,7 +47,7 @@ lagringen fra 30 GB til over 2 TB ([§11](#11-bilder-og-video)).
 | F7 | **Masseopplasting per år**: slipp 30 filer samtidig, skriv bildetekster etterpå |
 | F8 | **EXIF-dato leses automatisk** og foreslår årstall og opptaksdato |
 | F9 | Fritekstsøk over alle tekster; treff filtrerer årslisten |
-| F10 | Innlogging; lesetilgang og skrivetilgang styrt av rolle |
+| F10 | Innlogging med engangskode på e-post; roller fra tilgangsliste |
 | F11 | Mobilvennlig visning (mesteparten av lesingen skjer på telefon) |
 
 F7 og F8 er flyttet inn fra fase 2 etter at volumet ble kjent — se
@@ -65,7 +68,7 @@ De fire spørsmålene fra første utgave av dokumentet er nå besvart:
 
 | Spørsmål | Svar | Konsekvens |
 |---|---|---|
-| Helt privat? | **Ja** | Innlogging kreves også for lesing. Avgjør plan og mediehåndtering — se [§9](#9-autentisering-og-personvern) |
+| Helt privat? | **Ja** | Alt innhold bak innlogging, med **engangskode på e-post** etter husets mønster — se [§9](#9-autentisering-og-personvern) |
 | Omfang? | **~160 års spenn, ~90 årssider, 5–10 min video per år** | Se dimensjoneringen under |
 | Hvem redigerer? | **Én person i første omgang** | Forenkler roller, utkast og samtidighet — se under |
 | Import? | **Alt klippes og lastes inn manuelt, per år** | Ikke behov for importskript; i stedet masseopplasting i redigerings-GUI-et |
@@ -236,7 +239,7 @@ og er avledet data — kan alltid gjenskapes fra årsdokumentene via
    Nettleser        │            Azure Static Web Apps            │
   ┌──────────┐      │                                             │
   │  React   │◄─────┤  Statisk frontend (Vite-bygg)               │
-  │  (SPA)   │      │  staticwebapp.config.json: ruter + roller   │
+  │  (SPA)   │      │  staticwebapp.config.json: SPA-ruting + CSP │
   └────┬─────┘      │                                             │
        │ /api/*     │  ┌───────────────────────────────────────┐  │
        ├───────────►│  │ Managed Functions (Node/TypeScript)   │  │
@@ -246,11 +249,12 @@ og er avledet data — kan alltid gjenskapes fra årsdokumentene via
        │            └─────────────────┼───────────────────────────┘
        │                              ▼
        │                  ┌───────────────────────┐
-       │                  │  Azure Blob Storage   │
+       │                  │   Lagringskonto       │
        │                  │  ├─ innhold/  (JSON)  │
-       └─────────────────►│  └─ media/    (filer) │
-         SAS-URL, direkte │                       │
-         opp- og nedlast  └───────────────────────┘
+       └─────────────────►│  ├─ media/    (filer) │
+         SAS-URL, direkte │  └─ Table: koder,     │
+         opp- og nedlast  │     rate-limiting     │
+                          └───────────────────────┘
 ```
 
 **Hvorfor denne formen:**
@@ -262,8 +266,10 @@ og er avledet data — kan alltid gjenskapes fra årsdokumentene via
   Nødvendig for video: SWA-ens managed functions har både størrelses- og
   tidsbegrensninger, og videostrømming trenger range-requests. Det har også en
   kostnadsside — se [§13](#kostnad).
-- **Managed Identity** fra Function-laget mot Blob gjør at ingen lagringsnøkkel
-  ligger i konfigurasjon eller kode.
+- **Managed Identity** fra Function-laget mot lagringskontoen gjør at ingen
+  lagringsnøkkel ligger i konfigurasjon eller kode.
+- **All adgangskontroll ligger i Functions-laget**, ikke i konfigurasjonsfilen — en
+  følge av at innloggingen er egen og ikke SWA-ens ([§9.2](#92-det-ene-som-endrer-seg-strukturelt)).
 
 ---
 
@@ -286,6 +292,10 @@ media/                      (private)
   1972/01HR….mp4            transkodet klipp
   1972/01HR….poster.jpg
 ```
+
+I samme lagringskonto brukes i tillegg **Table Storage** til engangskoder, forsøkstellere
+og rate-limiting ([§9.3](#93-innloggingsflyten)) — kortlevd driftsdata som ikke hører
+hjemme blant årsdokumentene.
 
 **Anbefalte innstillinger på lagringskontoen:**
 
@@ -311,6 +321,11 @@ Alle endepunkter under `/api`. Skriveoperasjoner krever rollen `redaktoer`.
 | `POST` | `/api/media/opplasting` | redaktør | Tar en liste med filnavn + MIME-typer, returnerer skrive-SAS (15 min) per fil |
 | `DELETE` | `/api/media/{aar}/{id}` | redaktør | Slett mediefil og alle avledede filer |
 | `POST` | `/api/vedlikehold/bygg-indeks` | redaktør | Bygg `indeks.json` på nytt fra alle årsdokumenter |
+| `POST` | `/api/auth/kode` | åpen | Ber om engangskode på e-post. Svarer alltid `202` ([§9.3](#93-innloggingsflyten)) |
+| `POST` | `/api/auth/verifiser` | åpen | Bytter kode mot sesjon |
+| `POST` | `/api/auth/logg-ut` | familie | Trekker tilbake sesjonen |
+| `GET` | `/api/tilgang` | redaktør | Hent tilgangslisten |
+| `PUT` | `/api/tilgang` | redaktør | Oppdater tilgangslisten |
 
 At `/api/media/opplasting` tar en **liste** og ikke én fil er en liten detalj med stor
 effekt: den lar redigerings-GUI-et hente SAS for 30 filer i ett kall og laste dem opp
@@ -320,6 +335,12 @@ parallelt.
 i `If-Match`; hvis noe annet har lagret i mellomtiden svarer API-et `412` og klienten
 viser «Året er endret et annet sted — last inn på nytt». Med én redaktør er dette først
 og fremst et vern mot to åpne faner.
+
+**Autorisasjon skjer i hver funksjon.** Fordi innloggingen er egen og ikke SWA-ens, kan
+ikke `staticwebapp.config.json` beskytte noe ([§9.2](#92-det-ene-som-endrer-seg-strukturelt)).
+Rollekolonnen over håndheves derfor av en delt `krevRolle()`-hjelper som hvert endepunkt
+kaller først — det er én linje per funksjon, men det er den linjen som er hele
+adgangskontrollen, så den bør ha egne tester.
 
 **Validering.** API-et validerer årsdokumentet mot `felter.json` (Zod-skjema generert fra
 feltdefinisjonene) og saniterer rik tekst server-side før lagring — sanitering kun i
@@ -348,88 +369,129 @@ innenfor. Ingen dimensjonering nødvendig, og ingen søketjeneste å betale for.
 
 ## 9. Autentisering og personvern
 
-Valget er tatt: **hele nettstedet skal ligge bak innlogging**, ikke bare redigeringen.
-Innholdet er bilder og fortellinger om levende familiemedlemmer; et åpent nettsted blir
-indeksert av søkemotorer og arkivert av Wayback Machine, og lar seg i praksis ikke angre.
+Valget er tatt: hele innholdet ligger bak innlogging. Og siden dere allerede har et
+etablert mønster for det — **engangskode på e-post, med sesjonen lagret i nettleseren** —
+legges det til grunn her, i stedet for Static Web Apps' innebygde Entra-innlogging.
 
-### 9.1 Må det opprettes brukere i tenanten? Kreves lisens?
+Det er ikke et kompromiss. Det er en enklere og billigere løsning på dette problemet.
 
-**Kort svar: ingen lisens, men ja — med Entra-innlogging dukker familiemedlemmene opp
-som gjestebrukere i tenanten din. Det er gratis, men det er reell administrasjon.**
+### 9.1 Tenant- og lisensspørsmålet forsvinner
 
-Detaljene, med kildehenvisninger i [§17](#17-kilder):
+| | SWA + Entra ID | **OTP på e-post** |
+|---|---|---|
+| Brukere i tenanten | Én gjestebruker per person, via B2B | **Ingen** |
+| Lisenskostnad | Ingen (50 000 MAU gratis) | **Ingen** |
+| Tak på antall lesere | 25 med egendefinert rolle | **Ingen** |
+| SWA-plan | Gratis, Standard over 25 lesere | **Gratis, alltid** |
+| Administreres i | Azure-portalen | **Tilgangsliste i appen** |
+| Familien logger inn med | Microsoft-konto | **E-postadressen de allerede har** |
 
-**Lisens — nei.** Microsoft Entra External ID er gratis for de første **50 000 månedlig
-aktive brukere**. En familie på 10–40 personer ligger i praksis på null. Det kreves
-heller ikke en Entra ID P1-lisens per gjestebruker; MAU-modellen erstatter
-per-bruker-lisensiering for eksterne.
+Det siste punktet er det som betyr mest i praksis: en tante på 78 skal slippe å finne ut
+hva en Microsoft-konto er. Hun får en kode på e-post og skriver den inn.
 
-**Brukere i tenanten — det kommer an på innloggingsmåten.**
+Prisen er at dere eier autentiseringskoden selv — sesjonshåndtering, rate-limiting og
+tilbakekalling er deres å vedlikeholde, ikke Microsofts. Siden mønsteret allerede er i
+bruk i andre løsninger, er det en kjent kostnad og ikke en ny.
 
-| Innlogging | Objekt i tenanten din? | Plan | Realistisk for familien? |
-|---|---|---|---|
-| GitHub (forhåndskonfigurert) | Nei — går ikke via Entra B2B | Gratis | Nei, forutsetter GitHub-konto |
-| Microsoft Entra ID (forhåndskonfigurert) | **Ja, som gjestebruker via B2B** | Gratis | Ja — tar imot enhver Microsoft-konto, også personlig `outlook.com`/`hotmail.com` |
-| Egenregistrert Entra-app | Ja | **Standard** | Ja, og gir kontroll over kontotyper |
-| Entra External ID (eget eksternt tenant) | Nei, ikke i arbeidstenanten din | **Standard** | Ja — e-post + engangskode, Google, Apple |
+### 9.2 Det ene som endrer seg strukturelt
 
-Det er altså **gratis**, men ikke gratis i tid: hver invitasjon gir et gjestebrukerobjekt
-i katalogen din som du er ansvarlig for, og som må ryddes når noen ikke lenger skal ha
-tilgang.
+**`allowedRoles` i `staticwebapp.config.json` slutter å virke.** Static Web Apps kjenner
+bare sin egen innlogging; den ser ikke et token dere har utstedt selv. All autorisasjon
+må derfor flytte inn i Functions-laget, der hvert endepunkt validerer tokenet selv.
 
-### 9.2 Fellen som er verdt å kjenne
+Konsekvensen er verdt å forstå presist:
 
-Static Web Apps har en innebygd rolle `authenticated` som *alle* innloggede får. Siden
-den forhåndskonfigurerte Entra-leverandøren tar imot **enhver** Microsoft-konto, betyr
-`allowedRoles: ["authenticated"]` i praksis at *hvem som helst i verden med en
-Microsoft-konto* kan lese familiehistorien. Det er ikke personvern.
+| | Beskyttes av | Kommentar |
+|---|---|---|
+| `index.html`, JS, CSS | **Ingenting** | App-skallet er offentlig lesbart |
+| `/api/*` | Tokenvalidering i hver funksjon | All tekst og alle metadata |
+| Mediefiler i Blob | Kortlevd SAS, utstedt av API-et | Bilder og video |
 
-Tilgangen må derfor knyttes til en **egendefinert rolle** som bare deles ut ved
-invitasjon:
+**Ingenting av innholdet ligger i skallet**, så personvernet er like intakt — men to ting
+må legges til som SWA ellers ville gitt gratis:
 
-```jsonc
+1. **`noindex` og `robots.txt`.** Skallet er nå hentbart av søkemotorer. Det inneholder
+   ingenting, men et treff på «familiehistorie christiansen» i Google er uansett uønsket.
+   `<meta name="robots" content="noindex, nofollow">` og en `robots.txt` som avviser alt.
+2. **Dyplenker må overleve innlogging.** `/aar/1972` gir nå skallet, som oppdager at det
+   mangler gyldig token og viser innloggingen. Ruten må lagres og gjenopprettes etter at
+   koden er bekreftet, ellers havner man alltid på forsiden.
+
+**Mediehåndteringen er uendret.** SAS-modellen fra [§5](#5-arkitektur) forutsatte aldri
+SWA-innlogging — API-et validerer den som spør, og utsteder deretter en kortlevd URL.
+Den delen fungerer likt med OTP.
+
+### 9.3 Innloggingsflyten
+
+```
+1.  POST /api/auth/kode          { epost }
+    → slår opp mot tilgangslisten
+    → svarer alltid 202, uansett om adressen står der
+      (ellers lekker endepunktet hvem som er i familien)
+    → hvis på listen: genererer 6-sifret kode, lagrer hash + utløp + forsøksteller,
+      sender e-post via Azure Communication Services
+
+2.  POST /api/auth/verifiser     { epost, kode }
+    → sjekker hash, utløp (10 min) og forsøk (maks 5, deretter forkastes koden)
+    → ved treff: sletter koden, utsteder sesjonstoken
+
+3.  Klienten lagrer sesjonen og sender den med hvert /api-kall
+```
+
+**Serverstatus** — koder, forsøkstellere og rate-limiting — legges i **Azure Table
+Storage i samme lagringskonto**. Det er ikke å innføre en database: det er en funksjon i
+kontoen som allerede finnes, den koster brøkdeler av en krone, og den passer for data som
+skal utløpe og telles. Årsdokumentene forblir i Blob.
+
+**Rate-limiting** er ikke valgfritt. Et 6-sifret tall har en million kombinasjoner; uten
+tak på forsøk og på hvor ofte en kode kan bestilles, er det brukbart brute-force-mål.
+Maks 5 forsøk per kode og maks 5 kodebestillinger per adresse per time.
+
+### 9.4 Tilgangslisten er innhold, ikke portalarbeid
+
+`innhold/tilgang.json`, redigerbar fra en egen side i GUI-et:
+
+```json
 {
-  "routes": [
-    { "route": "/api/aar/*",         "methods": ["PUT", "DELETE"], "allowedRoles": ["redaktoer"] },
-    { "route": "/api/media/*",       "methods": ["POST", "DELETE"], "allowedRoles": ["redaktoer"] },
-    { "route": "/api/vedlikehold/*", "allowedRoles": ["redaktoer"] },
-    { "route": "/rediger/*",         "allowedRoles": ["redaktoer"] },
-    { "route": "/*",                 "allowedRoles": ["familie"] }
-  ],
-  "responseOverrides": { "401": { "statusCode": 302, "redirect": "/.auth/login/aad" } },
-  "navigationFallback": { "rewrite": "/index.html", "exclude": ["/media/*", "*.{css,js,png,jpg,mp4}"] }
+  "personer": [
+    { "epost": "jachrist@…", "navn": "Jan Christian", "roller": ["familie", "redaktoer"] },
+    { "epost": "tante@…",    "navn": "Tante Kari",    "roller": ["familie"] }
+  ]
 }
 ```
 
-**Taket på 25.** Den innebygde invitasjonsmekanismen tildeler egendefinerte roller til
-maks 25 brukere. Det er ingen grense på hvor mange som kan *logge inn* — bare på hvor
-mange som kan få rollen `familie`. Med fire generasjoner kan 25 bli trangt. To utveier:
+Dette passer bedre med resten av arkitekturen enn invitasjonsflyten gjorde: å legge til
+et familiemedlem blir en oppgave i appen, ikke i Azure-portalen, og listen
+sikkerhetskopieres sammen med alt annet innhold.
 
-- **Innenfor 25:** ingenting å gjøre, gratisplanen holder.
-- **Over 25:** en egen `getRoles`-funksjon (`auth.rolesSource` i konfigurasjonen) som
-  slår opp brukeren mot en tilgangsliste du selv styrer, f.eks. `innhold/tilgang.json`.
-  Ingen grense, og tilgangsstyringen flytter inn i appen i stedet for Azure-portalen.
-  **Krever Standard-planen**, siden det regnes som custom authentication.
+**Rollene sjekkes ved hvert kall, ikke bare ved innlogging.** Hvis noen fjernes fra
+listen, skal tilgangen forsvinne umiddelbart — ikke når sesjonen utløper om tretti dager.
+Listen caches i minnet i ~60 sekunder, så det koster ett blob-oppslag i minuttet.
 
-### 9.3 Anbefaling
+### 9.5 Om å lagre sesjonen i `localStorage`
 
-**Start på gratisplanen med forhåndskonfigurert Entra ID og invitasjoner.** Du er eneste
-redaktør, og de første leserne er sannsynligvis godt under 25. Det koster null, krever
-ingen app-registrering, og familiemedlemmer kan bruke den Microsoft-kontoen de allerede
-har.
+Mønsteret virker, og for dette nettstedet er trusselbildet moderat. Men det er én
+kombinasjon som fortjener oppmerksomhet nettopp her:
 
-**Bytt til Standard + `getRoles` når — og bare når — en av disse inntreffer:** dere
-passerer 25 lesere, du blir lei av å administrere gjestebrukere i portalen, eller familien
-vil logge inn med Google/Apple. Byttet endrer bare konfigurasjon og legger til én
-funksjon; ingen data eller sider må røres.
+> Årssidene inneholder **rik tekst som lagres og vises for andre**. Slipper det gjennom
+> uskadeliggjort HTML, kjører fremmed skript i nettleseren til den som leser — og et token
+> i `localStorage` er lesbart for alt skript på siden. Stored XSS blir da lik full
+> lesetilgang til hele arkivet.
 
-### 9.4 Media må beskyttes like godt som sidene
+Sanitering server-side ([§7](#7-api-kontrakt)) er derfor ikke lenger bare hygiene, den er
+den bærende sikkerhetskontrollen. I tillegg: en streng CSP, og ingen tredjepartsskript på
+sidene.
 
-En privat side hjelper lite hvis bilde-URL-ene er åpne. Derfor: private containere, og
-kortlevde lese-SAS (30–60 min) utstedt sammen med årsdokumentet. En SAS-URL som lekker,
-utløper av seg selv.
+**En liten oppgradering verdt å vurdere:** siden app og API ligger på samme opphav under
+Static Web Apps, kan sesjonen like gjerne ligge i en `httpOnly; Secure; SameSite=Strict`-
+informasjonskapsel som API-et setter. Da er den utilgjengelig for skript, uten CORS-arbeid
+og uten at noe annet i flyten endres. Det er den samme OTP-innloggingen, bare med tokenet
+et sted JavaScript ikke når.
 
-### 9.5 Det som ikke er teknikk
+Velges `localStorage` likevel, er det fullt forsvarlig — forutsatt at saniteringen og
+CSP-en er på plass. De to er uansett påkrevd.
+
+### 9.6 Det som ikke er teknikk
 
 - **Avtale i familien** om hva som deles: bilder av barn, helseopplysninger, konflikter,
   personer som er gått bort. Verdt en samtale før innholdet fylles på, ikke etter.
@@ -439,8 +501,6 @@ utløper av seg selv.
   Datamodellen gjør det lett: bilder er identifiserbare objekter i årsdokumentet.
 - **Eksportvei ut.** Alt innhold er JSON + filer i Blob. Et lite skript kan når som helst
   laste ned hele historikken. Ingen innelåsing.
-
----
 
 ## 10. Frontend
 
@@ -456,6 +516,8 @@ Tailwind — smakssak, ikke arkitektur.
 | `/aar/:aar` | Samme årsside som permalenke — for deling og dyplenking |
 | `/rediger/:aar` | Redigeringsskjema, generert fra `felter.json` |
 | `/rediger/nytt` | Opprett år: velg årstall, resten som over |
+| `/rediger/tilgang` | Tilgangslisten: hvem som er med, og hvem som kan redigere |
+| `/logg-inn` | E-postadresse, deretter engangskode. Husker hvor du var på vei |
 
 ### Forsiden
 
@@ -551,13 +613,17 @@ Familiehistorie/
 │  │  ├─ sider/            Forside, Aarsside, RedigerAar
 │  │  ├─ komponenter/      TiaarsGruppe, AarRad, Sokefelt, Mediegalleri,
 │  │  │                    Feltskjema, Opplastingskoe
-│  │  ├─ api/              typet klient mot /api
+│  │  ├─ api/              typet klient mot /api, med sesjon
+│  │  ├─ auth/             innloggingsside, sesjonslagring, dyplenkeminne
 │  │  ├─ media/            nedskalering, EXIF, blokkvis opplasting
 │  │  └─ sok/              MiniSearch-oppsett og normalisering
 │  └─ index.html
 ├─ api/                                 Azure Functions, TypeScript
-│  ├─ src/funksjoner/      aar.ts, media.ts, indeks.ts, felter.ts
+│  ├─ src/funksjoner/      aar.ts, media.ts, indeks.ts, felter.ts,
+│  │                      auth.ts, tilgang.ts
+│  ├─ src/auth/           token.ts, krevRolle.ts, otp.ts, epost.ts
 │  ├─ src/blob.ts          Blob-klient med Managed Identity
+│  ├─ src/tabell.ts        Table Storage: koder og rate-limiting
 │  └─ src/skjema.ts        Zod-validering + sanitering
 ├─ delt/                                Typer delt mellom app og api
 │  └─ typer.ts
@@ -582,8 +648,9 @@ midlertidig forhåndsvisningsmiljø.
 ### Miljøer
 
 Ett produksjonsmiljø holder. Lokal utvikling kjøres med **SWA CLI** (`swa start`), som
-etterligner ruting, autentisering og roller lokalt, mot **Azurite** som lokal Blob-emulator.
-Da trengs ingen Azure-ressurser for å utvikle.
+etterligner ruting lokalt, mot **Azurite** som emulerer både Blob og Table. Innloggingen er
+vår egen, så den kjører uendret lokalt — med e-postutsendingen byttet ut mot en funksjon
+som skriver koden til konsollen. Da trengs ingen Azure-ressurser for å utvikle.
 
 ### Sikkerhetskopi
 
@@ -599,14 +666,28 @@ oppdager tapet altfor sent.
 
 *Anslag i USD/mnd, bør verifiseres mot gjeldende prisliste.*
 
-| Post | Gratisplan | Standardplan |
-|---|---|---|
-| Static Web Apps | 0 | ~9 |
-| Blob Storage, ~50 GB Hot | ~1 | ~1 |
-| Bildeoriginaler, ~11 GB Archive | ~0,02 | ~0,02 |
-| Utgående trafikk (se under) | 0 | 0 |
-| Application Insights | ~0 (under gratiskvote) | ~0 |
-| **Sum** | **~1 USD** | **~10 USD** |
+| Post | Kostnad |
+|---|---|
+| Static Web Apps, **gratisplanen** | 0 |
+| Blob Storage, ~50 GB Hot | ~1 |
+| Bildeoriginaler, ~11 GB Archive | ~0,02 |
+| Table Storage (koder, rate-limiting) | ~0 |
+| Azure Communication Services, e-post | ~0 |
+| Utgående trafikk (se under) | 0 |
+| Application Insights | ~0 (under gratiskvote) |
+| **Sum** | **~1 USD/mnd** |
+
+Standard-planen er ikke lenger aktuell. Den trengtes bare til SWA-ens egen custom
+authentication og til å komme forbi taket på 25 inviterte brukere — og med egen
+OTP-innlogging finnes ingen av de to begrensningene. Gratisplanen holder uansett hvor
+mange familien blir.
+
+E-postutsending er noen titalls meldinger i måneden. Azure Communication Services
+prises per melding og per datamengde; beløpet er i praksis null, men bør slås opp i
+[prislisten](https://azure.microsoft.com/en-us/pricing/details/communication-services/)
+hvis nøyaktighet ønskes. Merk at avsenderdomenet bør **verifiseres** — den
+Azure-genererte avsenderadressen havner ofte i søppelpost, og en engangskode som ikke
+kommer fram er en innlogging som ikke virker.
 
 **Om båndbredde — en presisering.** Siden media serveres direkte fra Blob og ikke gjennom
 Static Web Apps, går videotrafikken *ikke* på SWA-kvoten. Det er en fordel, for på
@@ -641,17 +722,22 @@ billig forsikring mot at det lastes opp utranskodet video.
 | 6 | Redigering: skjemagenerering, autolagring |
 | 7 | **Masseopplasting**: kø, parallellitet, fremdrift, nedskalering, EXIF, bildetekstliste |
 | 8 | Søk med MiniSearch og filtrering av årslisten |
-| 9 | Autentisering, `familie`/`redaktoer`, ruteregler, private media-SAS |
+| 9 | **OTP-innlogging**: kode på e-post, sesjon, `krevRolle()` i alle endepunkter, tilgangsliste, rate-limiting, private media-SAS |
 | 10 | Video: blokkvis opplasting, plakatbilde, avspilling, advarsel om utranskodet fil |
 | 11 | Mobiltilpasning, tomtilstander, feilmeldinger på norsk, sikkerhetskopijobb |
 
 Rekkefølgen er valgt slik at det finnes noe kjørbart å se på fra og med trinn 4.
-Estimatet er én dag høyere enn i første utgave, fordi masseopplasting og EXIF er flyttet
-inn fra fase 2 — det er den dagen som sparer flest timer senere.
+
+Estimatet har vokst fra 5–8 til 7–10 dager gjennom to bevisste utvidelser: masseopplasting
+og EXIF flyttet inn fra fase 2 (trinn 7), og egen OTP-innlogging i stedet for SWA-ens
+ferdige (trinn 9). Den siste koster omtrent én dag mer å bygge enn å slå på
+Entra-innloggingen — og sparer til gjengjeld all tenant-administrasjon, taket på 25
+lesere, og at familien må skaffe seg Microsoft-kontoer.
 
 ### Fase 2 — bruksforbedringer
 
 - Utkast før publisering (relevant først hvis flere redaktører kommer til)
+- «Husk meg på denne enheten» med lengre sesjon og enhetsliste
 - Miniatyrer generert server-side (blob-utløst funksjon), avlaster nettleseren
 - Bedre bildevisning: lysbokse med sveiping og tastaturnavigasjon
 - Tidslinjevisning på tvers av år
@@ -665,7 +751,8 @@ fase 1 dekker behovet.
 - Personregister med tagging av personer i bilder og egne personsider
 - Kommentarer og minner fra familiemedlemmer uten redaktørrolle
 - Eksport til PDF eller trykk-klar bok
-- `getRoles`-funksjon og Standard-plan hvis leserlisten passerer 25
+- Innlogging med lenke i e-post («magic link») som alternativ til å taste kode
+- To-faktor for redaktørrollen, hvis flere redaktører kommer til
 
 ---
 
@@ -673,12 +760,14 @@ fase 1 dekker behovet.
 
 | Risiko | Konsekvens | Håndtering |
 |---|---|---|
-| `authenticated` forveksles med «familien» | Hele arkivet åpent for alle med Microsoft-konto | Ruteregler krever egendefinert rolle `familie`, aldri `authenticated` ([§9.2](#92-fellen-som-er-verdt-å-kjenne)) |
+| Endepunkt glemmer `krevRolle()` | Det endepunktet er åpent for alle | Autorisasjon er nå kode, ikke konfigurasjon: felles hjelper, egne tester, og en test som feiler hvis en rute mangler den |
+| Stored XSS i rik tekst stjeler sesjonen | Full lesetilgang til arkivet | Sanitering server-side, streng CSP, ingen tredjepartsskript — eventuelt sesjon i `httpOnly`-cookie ([§9.5](#95-om-å-lagre-sesjonen-i-localstorage)) |
+| Engangskode brute-forces | Uvedkommende kommer inn | Maks 5 forsøk per kode, maks 5 bestillinger per adresse per time, 10 min utløp |
+| Kodene havner i søppelpost | Ingen får logget inn | Verifisert avsenderdomene, ikke den Azure-genererte adressen |
 | Utranskodet video lastes opp | Lagring ×80, treg opplasting og avspilling | Fast rutine med `ffmpeg`, størrelsesadvarsel i GUI, kostnadsvarsling på kontoen |
 | Data går tapt | Uerstattelig | Blob-versjonering, soft delete, ukentlig kopi ut av Azure |
 | Innhold lekker offentlig | Alvorlig og lite reverserbart | Innlogging også for lesing, private containere, kortlevde SAS |
 | Metadatajobben blir for stor | 2 250 bilder uten bildetekst | Masseopplasting, EXIF-utfylling, bildetekst kan skrives senere |
-| Leserlisten passerer 25 | Nye familiemedlemmer kommer ikke inn | Planlagt utvei: `getRoles` + Standard-plan ([§9.2](#92-fellen-som-er-verdt-å-kjenne)) |
 | Prosjektet stopper opp etter MVP | Tomt nettsted | Fase 1 leverer et fullt brukbart nettsted; fase 2 og 3 er rene tillegg |
 | Innelåsing i Azure | Vanskelig å flytte | Alt innhold er JSON + filer; ingen proprietær datamodell |
 
@@ -694,8 +783,12 @@ fase 1 dekker behovet.
    Actions-arbeidsflyten.
 4. **Bygg trinn 1–4** av fase 1 og se på resultatet før resten planlegges i detalj — den
    første ekte årssiden pleier å endre meningen om ganske mye.
-5. **Test invitasjonsflyten med ett familiemedlem** før du inviterer alle. Da ser du hva
-   det faktisk innebærer å bli gjestebruker i tenanten, og om det er akseptabelt.
+5. **Bestem hvor sesjonen skal ligge** — `localStorage` som i deres øvrige løsninger,
+   eller en `httpOnly`-cookie ([§9.5](#95-om-å-lagre-sesjonen-i-localstorage)). Valget
+   påvirker bare noen linjer i API-et og klienten, men er lettest å ta nå.
+6. **Sett opp avsenderdomenet for e-post tidlig.** Domeneverifisering tar gjerne et døgn
+   på grunn av DNS, og uten den havner engangskodene i søppelpost. Det er den enkleste
+   måten å bli forsinket på i trinn 9.
 
 ---
 
@@ -704,7 +797,7 @@ fase 1 dekker behovet.
 Faktagrunnlaget for [§9](#9-autentisering-og-personvern) og [§13](#kostnad), kontrollert
 i august 2026:
 
-- [Authenticate and authorize Static Web Apps](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-authorization) — forhåndskonfigurerte leverandører (Entra ID og GitHub), invitasjoner, egendefinerte roller
+- [Authenticate and authorize Static Web Apps](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-authorization) — forhåndskonfigurerte leverandører, invitasjoner og `allowedRoles`; bakgrunn for [§9.2](#92-det-ene-som-endrer-seg-strukturelt)
 - [Custom authentication in Azure Static Web Apps](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-custom) — custom auth krever Standard-planen; egne registreringer slår av de forhåndskonfigurerte
 - [Quotas in Azure Static Web Apps](https://learn.microsoft.com/en-us/azure/static-web-apps/quotas) — taket på 25 brukere for egendefinerte roller; ingen grense på antall innlogginger
 - [Azure Static Web Apps hosting plans](https://learn.microsoft.com/en-us/azure/static-web-apps/plans) — Free vs. Standard
@@ -712,9 +805,12 @@ i august 2026:
 - [Assign Static Web Apps roles with Microsoft Graph](https://learn.microsoft.com/en-us/azure/static-web-apps/assign-roles-microsoft-graph) — `rolesSource` og `getRoles`-funksjonen
 - [External ID pricing](https://learn.microsoft.com/en-us/entra/external-id/external-identities-pricing) — 50 000 MAU gratis, ingen P1-lisens per gjest
 - [Azure bandwidth pricing](https://azure.microsoft.com/en-us/pricing/details/bandwidth/) — 100 GB utgående trafikk gratis per måned
+- [Azure Communication Services pricing](https://azure.microsoft.com/en-us/pricing/details/communication-services/) — e-postutsending; konkret sats ikke gjengitt her, se prislisten
 
-**Forbehold.** Punktet om at Entra-invitasjoner oppretter gjestebrukerobjekter via B2B
-stammer fra Microsofts støtteforum, ikke fra produktdokumentasjonen — det er den delen av
-[§9.1](#91-må-det-opprettes-brukere-i-tenanten-kreves-lisens) som er verdt å bekrefte selv
-med én testinvitasjon (steg 5 i [§16](#16-neste-steg)) før hele familien inviteres.
-Prisene bør alltid kontrolleres mot gjeldende prisliste.
+Entra-tallene over er beholdt fordi de begrunner *hvorfor* OTP-mønsteret er å foretrekke
+her ([§9.1](#91-tenant--og-lisensspørsmålet-forsvinner)) — de er ikke lenger noe løsningen
+avhenger av.
+
+**Forbehold.** Prisene bør alltid kontrolleres mot gjeldende prisliste; satsen for
+e-postutsending er bevisst ikke gjengitt, siden den ikke lot seg bekrefte i denne
+gjennomgangen.
