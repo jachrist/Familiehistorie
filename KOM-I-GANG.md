@@ -66,9 +66,10 @@ På macOS og Linux:
 npm i -g azure-functions-core-tools@4 --unsafe-perm true
 ```
 
-> Den globale npm-installasjonen er erfaringsmessig skjør på Windows — den kan
-> feile med `E401` eller `EPERM` og etterlate en halvferdig kopi som *starter*,
-> men faller over ved oppstart av verten. Bruk MSI-en der.
+> **Bruk 4.14.0 eller nyere.** 4.13.0 kaster
+> `Exception has been thrown by the target of an invocation` ved oppstart av
+> verten, uansett prosjekt. Winget kan fortsatt tilby 4.13.0, og den globale
+> npm-installasjonen er skjør på Windows (`E401`, `EPERM`) — derfor MSI-en.
 
 Sjekk med `func --version` — den skal vise 4.14 eller nyere. Viser den en
 eldre 4.x, kan det være en halvferdig npm-installasjon; se
@@ -158,8 +159,7 @@ invocation», som ikke sier noe om årsaken. `--verbose` gir resten.
 | `EPERM: operation not permitted, rmdir …\AppData\Roaming\npm\…` | En rest fra en avbrutt global installasjon. Lukk kjørende `func`-prosesser, slett mappa manuelt, og bruk heller winget på Windows |
 | «Could not connect to http://localhost:5173» | Frontenden startet ikke. Se etter feilen rett over i loggen |
 | `func start` feiler uansett prosjekt | Sjekk om det er `func` eller prosjektet: `cd $env:TEMP; func init proev --worker-runtime node --model V4; cd proev; npm install; func start`. Feiler også det tomme prosjektet, ligger feilen i `func` eller på maskinen |
-| `func start` sier «Resolving worker runtime to 'node'» og deretter `Exception has been thrown by the target of an invocation` | `func` er sannsynligvis halvinstallert — en npm-installasjon som feilet underveis etterlater en kopi som starter, men mangler vertsfilene. Sjekk kilden med `Get-Command func \| Select-Object -ExpandProperty Source`. Peker den inn i `AppData\Roaming\npm\`, slett `$env:APPDATA\npm\node_modules\azure-functions-core-tools` og `$env:APPDATA\npm\func*`, installer med winget, og åpne et nytt skall |
-| `Exception has been thrown by the target of an invocation` | Kommer fra `func`, ikke fra SWA CLI. Nesten alltid at Azurite ikke kjører. `npm run dev` starter den nå selv. For den ekte feilmeldingen: `cd api` og `func start` |
+| `Exception has been thrown by the target of an invocation` | **Kjent feil i Core Tools 4.13.0.** Verten faller over rett etter «Resolving worker runtime», uansett prosjekt — også et tomt `func init`. Oppgrader til 4.14.0 eller nyere med MSI-en fra GitHub, se forutsetningene over. `npm run sjekk` fanger det. |
 | «Azurite svarte ikke på port 10000» | Se hva Azurite selv sier: `npx azurite --location .azurite --skipApiVersionCheck`. Er porten opptatt av noe annet: `netstat -ano \| findstr :10000` på Windows |
 | `"localhost" can not be resolved to either IPv4 or IPv6` | Windows slår opp `localhost` til `::1`, der ingenting lytter. Både SWA CLI og Vite er nå bundet til `127.0.0.1` i konfigurasjonen. Får du den likevel, sjekk at `C:\Windows\System32\drivers\etc\hosts` har linja `127.0.0.1 localhost` |
 | Azurite svarer ikke | `npm run dev` starter den, og bruker en som allerede kjører hvis den finnes. Kjører du `dev:kun-swa`, må du starte `npm run azurite` selv |

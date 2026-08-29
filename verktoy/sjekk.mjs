@@ -68,10 +68,19 @@ else nei("Node", `v${node} støttes ikke av Azure Functions. Installer Node 22 f
 const funcVersjon = kjor("func", ["--version"]);
 if (!funcVersjon) {
   nei("Functions Core Tools", "ikke funnet. På Windows: winget install Microsoft.Azure.FunctionsCoreTools");
-} else if (funcVersjon.startsWith("4.")) {
-  ok("Functions Core Tools", `v${funcVersjon}`);
-} else {
+} else if (!funcVersjon.startsWith("4.")) {
   nei("Functions Core Tools", `v${funcVersjon} – prosjektet krever v4`);
+} else {
+  // 4.13.0 starter, men verten faller over rett etter at workeren er løst.
+  const [, mindre = "0"] = funcVersjon.split(".");
+  if (Number(mindre) < 14) {
+    nei(
+      "Functions Core Tools",
+      `v${funcVersjon} kaster «Exception has been thrown by the target of an invocation» ved oppstart. Installer 4.14.0 eller nyere: github.com/Azure/azure-functions-core-tools/releases`
+    );
+  } else {
+    ok("Functions Core Tools", `v${funcVersjon}`);
+  }
 }
 
 console.log("\nProsjekt");
