@@ -75,6 +75,7 @@ uten `api/dist` finner Functions ingenting å kjøre.
 
 | Symptom | Årsak og fiks |
 |---|---|
+| `ENOENT … Could not read package.json` | Du står ikke i repo-rota. Klonet du inn i en mappe du laget selv, ligger repoet ett nivå ned. `dir package.json` (Windows) eller `ls package.json` bekrefter |
 | `func` spør hvilket språk prosjektet er i (dotnet / Node / Python …) | `api/local.settings.json` mangler eller er tom. Kjør `npm run forbered` |
 | «Could not find or install Azure Functions Core Tools» | Ikke installert. Se forutsetningene over |
 | `npm error code E401 … Unable to authenticate` | Ugyldig tilgangsnøkkel i din egen `.npmrc`. **Ikke** logg inn — offentlige pakker krever ingen konto. Fjern nøkkelen: `npm config delete //registry.npmjs.org/:_authToken` |
