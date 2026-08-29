@@ -5,12 +5,14 @@
       "appLocation": "app",
       "apiLocation": "api",
       "outputLocation": "dist",
-      "appDevserverUrl": "http://localhost:5173",
       "apiLanguage": "node",
       "apiVersion": "22",
       "run": "npm run dev",
       "appBuildCommand": "npm run build",
-      "apiBuildCommand": "npm run build"
+      "apiBuildCommand": "npm run build",
+
+      "host": "127.0.0.1",
+      "appDevserverUrl": "http://127.0.0.1:5173"
     }
   }
 }

@@ -130,6 +130,7 @@ invocation», som ikke sier noe om årsaken. `--verbose` gir resten.
 | «Could not connect to http://localhost:5173» | Frontenden startet ikke. Se etter feilen rett over i loggen |
 | `Exception has been thrown by the target of an invocation` | Kommer fra `func`, ikke fra SWA CLI. Nesten alltid at Azurite ikke kjører. `npm run dev` starter den nå selv. For den ekte feilmeldingen: `cd api` og `func start` |
 | «Azurite svarte ikke på port 10000» | Se hva Azurite selv sier: `npx azurite --location .azurite --skipApiVersionCheck`. Er porten opptatt av noe annet: `netstat -ano \| findstr :10000` på Windows |
+| `"localhost" can not be resolved to either IPv4 or IPv6` | Windows slår opp `localhost` til `::1`, der ingenting lytter. Både SWA CLI og Vite er nå bundet til `127.0.0.1` i konfigurasjonen. Får du den likevel, sjekk at `C:\Windows\System32\drivers\etc\hosts` har linja `127.0.0.1 localhost` |
 | Azurite svarer ikke | `npm run dev` starter den, og bruker en som allerede kjører hvis den finnes. Kjører du `dev:kun-swa`, må du starte `npm run azurite` selv |
 
 `api/local.settings.json` er gitignorert, siden det er der ekte nøkler havner
