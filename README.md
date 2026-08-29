@@ -47,16 +47,24 @@ Søket, datamodellen og kostnadsbildet holder som beskrevet — samlet lagring l
 
 ### Innlogging
 Innlogging skjer med **engangskode på e-post**, etter samme mønster som våre øvrige
-løsninger, og sesjonen lagres i nettleseren. Det fjerner hele tenant-, lisens- og
-plandiskusjonen: ingen brukere i tenanten, ingen lisenser, intet tak på antall lesere, og
-gratisplanen holder uansett hvor mange familien blir.
+løsninger, og sesjonen ligger i en `httpOnly; Secure; SameSite=Strict`-informasjonskapsel.
+Det fjerner hele tenant-, lisens- og plandiskusjonen: ingen brukere i tenanten, ingen
+lisenser, intet tak på antall lesere, og gratisplanen holder uansett hvor mange familien
+blir.
+
+Kapselen er både sikrere og enklere enn å lagre tokenet i `localStorage`. Sikrere fordi
+skript ikke kan lese sesjonen og sende den ut av nettleseren. Enklere fordi klienten ikke
+har noe å lagre eller feste på hver forespørsel — app og API deler opphav, så nettleseren
+sender den selv. Til gjengjeld trengs `GET /api/meg` ved oppstart, siden klienten ikke kan
+lese kapselen for å vite hvem som er innlogget.
 
 Én ting endrer seg strukturelt: **`allowedRoles` i `staticwebapp.config.json` slutter å
 virke**, siden Static Web Apps ikke kjenner et token vi utsteder selv. All adgangskontroll
-flytter inn i Functions-laget, der hvert endepunkt validerer sesjonen. App-skallet blir
-dermed offentlig hentbart — det inneholder ingenting, men trenger `noindex` og en
-`robots.txt`. Mediehåndteringen med kortlevde SAS-URL-er er uendret.
+flytter inn i Functions-laget, bak en delt hjelper som håndhever både rolle og
+`Content-Type`. App-skallet blir dermed offentlig hentbart — det inneholder ingenting, men
+trenger `noindex` og en `robots.txt`. Mediehåndteringen med kortlevde SAS-URL-er er uendret.
 
-To ting blir viktigere enn de var: **sanitering av rik tekst server-side**, som nå er den
-bærende sikkerhetskontrollen snarere enn hygiene, og **rate-limiting av engangskoder**.
+**XSS er fortsatt den viktige risikoen.** Kapselen hindrer at sesjonen kan stjeles og
+brukes senere, men ikke at et skript på siden handler som den innloggede mens fanen er
+åpen. Sanitering av rik tekst server-side og en streng CSP er derfor uansett påkrevd.
 Detaljer i [§9](docs/omfang-og-arkitektur.md#9-autentisering-og-personvern).

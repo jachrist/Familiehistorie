@@ -23,7 +23,8 @@ JSON-dokument i Blob, med et lite indeksdokument som driver forside og søk.
 **Estimert driftskostnad: ca. 1 USD/mnd** på gratisplanen (se [§13](#kostnad)).
 
 Innlogging skjer med **engangskode på e-post**, etter samme mønster som deres øvrige
-løsninger. Det fjerner både tenant-, lisens- og plandiskusjonen ([§9](#9-autentisering-og-personvern)).
+løsninger, med sesjonen i en `httpOnly`-informasjonskapsel. Det fjerner både tenant-,
+lisens- og plandiskusjonen ([§9](#9-autentisering-og-personvern)).
 
 Dimensjoneringen er nå kjent: rundt 90 årssider, ~11 timer ferdig klippet video og
 ~2 000–2 500 bilder. Det er godt innenfor det arkitekturen over tåler — med ett unntak
@@ -68,7 +69,7 @@ De fire spørsmålene fra første utgave av dokumentet er nå besvart:
 
 | Spørsmål | Svar | Konsekvens |
 |---|---|---|
-| Helt privat? | **Ja** | Alt innhold bak innlogging, med **engangskode på e-post** etter husets mønster — se [§9](#9-autentisering-og-personvern) |
+| Helt privat? | **Ja** | Alt innhold bak innlogging, med **engangskode på e-post** og sesjon i `httpOnly`-kapsel — se [§9](#9-autentisering-og-personvern) |
 | Omfang? | **~160 års spenn, ~90 årssider, 5–10 min video per år** | Se dimensjoneringen under |
 | Hvem redigerer? | **Én person i første omgang** | Forenkler roller, utkast og samtidighet — se under |
 | Import? | **Alt klippes og lastes inn manuelt, per år** | Ikke behov for importskript; i stedet masseopplasting i redigerings-GUI-et |
@@ -322,8 +323,9 @@ Alle endepunkter under `/api`. Skriveoperasjoner krever rollen `redaktoer`.
 | `DELETE` | `/api/media/{aar}/{id}` | redaktør | Slett mediefil og alle avledede filer |
 | `POST` | `/api/vedlikehold/bygg-indeks` | redaktør | Bygg `indeks.json` på nytt fra alle årsdokumenter |
 | `POST` | `/api/auth/kode` | åpen | Ber om engangskode på e-post. Svarer alltid `202` ([§9.3](#93-innloggingsflyten)) |
-| `POST` | `/api/auth/verifiser` | åpen | Bytter kode mot sesjon |
-| `POST` | `/api/auth/logg-ut` | familie | Trekker tilbake sesjonen |
+| `POST` | `/api/auth/verifiser` | åpen | Bytter kode mot sesjon; setter `fh_sesjon`-kapselen |
+| `POST` | `/api/auth/logg-ut` | familie | Sletter kapselen (`Max-Age=0`) |
+| `GET` | `/api/meg` | familie | `{ epost, navn, roller }` eller `401`. Kalles ved oppstart, siden kapselen ikke er lesbar for skript |
 | `GET` | `/api/tilgang` | redaktør | Hent tilgangslisten |
 | `PUT` | `/api/tilgang` | redaktør | Oppdater tilgangslisten |
 
@@ -340,7 +342,9 @@ og fremst et vern mot to åpne faner.
 ikke `staticwebapp.config.json` beskytte noe ([§9.2](#92-det-ene-som-endrer-seg-strukturelt)).
 Rollekolonnen over håndheves derfor av en delt `krevRolle()`-hjelper som hvert endepunkt
 kaller først — det er én linje per funksjon, men det er den linjen som er hele
-adgangskontrollen, så den bør ha egne tester.
+adgangskontrollen, så den bør ha egne tester. Samme hjelper avviser skriveoperasjoner med
+annen `Content-Type` enn `application/json`, som er den andre halvdelen av CSRF-vernet
+([§9.5](#95-sesjonen-ligger-i-en-httponly-informasjonskapsel)).
 
 **Validering.** API-et validerer årsdokumentet mot `felter.json` (Zod-skjema generert fra
 feltdefinisjonene) og saniterer rik tekst server-side før lagring — sanitering kun i
@@ -435,7 +439,8 @@ Den delen fungerer likt med OTP.
     → sjekker hash, utløp (10 min) og forsøk (maks 5, deretter forkastes koden)
     → ved treff: sletter koden, utsteder sesjonstoken
 
-3.  Klienten lagrer sesjonen og sender den med hvert /api-kall
+3.  Svaret setter fh_sesjon-kapselen; nettleseren sender den selv
+    med hvert /api-kall. Klienten trenger ikke røre den.
 ```
 
 **Serverstatus** — koder, forsøkstellere og rate-limiting — legges i **Azure Table
@@ -468,30 +473,72 @@ sikkerhetskopieres sammen med alt annet innhold.
 listen, skal tilgangen forsvinne umiddelbart — ikke når sesjonen utløper om tretti dager.
 Listen caches i minnet i ~60 sekunder, så det koster ett blob-oppslag i minuttet.
 
-### 9.5 Om å lagre sesjonen i `localStorage`
+### 9.5 Sesjonen ligger i en `httpOnly`-informasjonskapsel
 
-Mønsteret virker, og for dette nettstedet er trusselbildet moderat. Men det er én
-kombinasjon som fortjener oppmerksomhet nettopp her:
+Valgt løsning. Fordi app og API deler opphav under Static Web Apps, koster det ingen
+CORS-oppsett, og det gjør klienten *enklere* enn `localStorage`-varianten — ikke bare
+sikrere.
 
-> Årssidene inneholder **rik tekst som lagres og vises for andre**. Slipper det gjennom
-> uskadeliggjort HTML, kjører fremmed skript i nettleseren til den som leser — og et token
-> i `localStorage` er lesbart for alt skript på siden. Stored XSS blir da lik full
-> lesetilgang til hele arkivet.
+```
+Set-Cookie: fh_sesjon=<signert token>;
+            HttpOnly;                 ikke lesbar for skript
+            Secure;                   kun over HTTPS
+            SameSite=Strict;          ikke sendt fra andre nettsteder
+            Path=/api;                sendes ikke med bilder, CSS og JS
+            Max-Age=2592000           30 dager, fornyes ved bruk
+```
 
-Sanitering server-side ([§7](#7-api-kontrakt)) er derfor ikke lenger bare hygiene, den er
-den bærende sikkerhetskontrollen. I tillegg: en streng CSP, og ingen tredjepartsskript på
-sidene.
+Navnet bør ikke kollidere med SWA-ens egen `StaticWebAppsAuthCookie`.
 
-**En liten oppgradering verdt å vurdere:** siden app og API ligger på samme opphav under
-Static Web Apps, kan sesjonen like gjerne ligge i en `httpOnly; Secure; SameSite=Strict`-
-informasjonskapsel som API-et setter. Da er den utilgjengelig for skript, uten CORS-arbeid
-og uten at noe annet i flyten endres. Det er den samme OTP-innloggingen, bare med tokenet
-et sted JavaScript ikke når.
+**Klienten blir enklere.** Det finnes ikke lenger noe token å lagre, lese, feste på hver
+forespørsel eller holde synkronisert mellom faner — nettleseren sender kapselen selv.
+`fetch("/api/indeks")` virker uten videre, og utlogging er et `Set-Cookie` med
+`Max-Age=0` fra serveren. Hele sesjonsmodulen i frontend forsvinner.
 
-Velges `localStorage` likevel, er det fullt forsvarlig — forutsatt at saniteringen og
-CSP-en er på plass. De to er uansett påkrevd.
+Til gjengjeld kommer én ting til: klienten kan ikke lenger lese sesjonen for å vite om
+noen er innlogget. Derfor et nytt endepunkt, `GET /api/meg`, som SPA-en kaller ved
+oppstart og får `{ epost, navn, roller }` eller `401` fra. Det er en forbedring i seg
+selv — serveren blir eneste kilde til hvilke roller som gjelder nå.
 
-### 9.6 Det som ikke er teknikk
+**`SameSite=Strict` er uproblematisk her, nettopp fordi skallet er offentlig.** En lenke
+til `/aar/1972` fra e-post eller chat er en navigasjon på tvers av nettsteder, og
+kapselen blir *ikke* sendt med den. Men den forespørselen henter bare `index.html`, som
+ikke trenger sesjon. Straks appen kjører, er alle `/api`-kall utgått fra vårt eget
+opphav, og kapselen følger med. Det som i [§9.2](#92-det-ene-som-endrer-seg-strukturelt)
+så ut som en ulempe ved egen innlogging, er altså det som gjør den strengeste
+kapselinnstillingen smertefri.
+
+**CSRF.** Kapsler sendes automatisk, så det spørsmålet må stilles. Det er dekket to
+ganger her: `SameSite=Strict` gjør at kapselen aldri følger en forespørsel fra et annet
+nettsted, og alle skriveoperasjoner krever `Content-Type: application/json`, som et
+vanlig HTML-skjema ikke kan produsere — det utløser preflight, som nettleseren stopper.
+Egne CSRF-tokener er derfor unødvendig. **Betingelsen er at API-et faktisk avviser
+skriveoperasjoner med annen `Content-Type`**, så den sjekken hører hjemme i den samme
+delte hjelperen som rollekontrollen.
+
+**Lokalt.** `Secure` over `http://localhost` håndteres ulikt av nettleserne. Enkleste
+løsning er å la flagget følge miljøet, slik at det er av lokalt og på i drift — én linje,
+og ingen nettleseravhengige overraskelser.
+
+### 9.6 XSS er fortsatt den viktige risikoen
+
+Kapselen fjerner én bestemt konsekvens: et skript på siden kan ikke lese sesjonen og
+sende den ut av nettleseren. Legitimasjon som fortsetter å virke lenge etter at fanen er
+lukket, kan altså ikke stjeles.
+
+Den fjerner **ikke** XSS som problem. Et skript som kjører på siden, kan fremdeles gjøre
+kall mot `/api` på vegne av den innloggede — kapselen følger med, siden kallet kommer fra
+vårt eget opphav. Forskjellen er at angrepet varer så lenge fanen er åpen, i stedet for i
+tretti dager.
+
+Derfor står disse to uansett ved lag, uendret fra forrige utgave:
+
+- **Sanitering av rik tekst server-side** ([§7](#7-api-kontrakt)). Årssidene lagrer HTML
+  som vises for andre familiemedlemmer; det er den ene realistiske XSS-veien inn i dette
+  nettstedet, og den lukkes på serveren, ikke i nettleseren.
+- **Streng CSP**, og ingen tredjepartsskript på sidene.
+
+### 9.7 Det som ikke er teknikk
 
 - **Avtale i familien** om hva som deles: bilder av barn, helseopplysninger, konflikter,
   personer som er gått bort. Verdt en samtale før innholdet fylles på, ikke etter.
@@ -614,14 +661,14 @@ Familiehistorie/
 │  │  ├─ komponenter/      TiaarsGruppe, AarRad, Sokefelt, Mediegalleri,
 │  │  │                    Feltskjema, Opplastingskoe
 │  │  ├─ api/              typet klient mot /api, med sesjon
-│  │  ├─ auth/             innloggingsside, sesjonslagring, dyplenkeminne
+│  │  ├─ auth/             innloggingsside, /api/meg ved oppstart, dyplenkeminne
 │  │  ├─ media/            nedskalering, EXIF, blokkvis opplasting
 │  │  └─ sok/              MiniSearch-oppsett og normalisering
 │  └─ index.html
 ├─ api/                                 Azure Functions, TypeScript
 │  ├─ src/funksjoner/      aar.ts, media.ts, indeks.ts, felter.ts,
 │  │                      auth.ts, tilgang.ts
-│  ├─ src/auth/           token.ts, krevRolle.ts, otp.ts, epost.ts
+│  ├─ src/auth/           token.ts, kapsel.ts, krevRolle.ts, otp.ts, epost.ts
 │  ├─ src/blob.ts          Blob-klient med Managed Identity
 │  ├─ src/tabell.ts        Table Storage: koder og rate-limiting
 │  └─ src/skjema.ts        Zod-validering + sanitering
@@ -760,8 +807,8 @@ fase 1 dekker behovet.
 
 | Risiko | Konsekvens | Håndtering |
 |---|---|---|
-| Endepunkt glemmer `krevRolle()` | Det endepunktet er åpent for alle | Autorisasjon er nå kode, ikke konfigurasjon: felles hjelper, egne tester, og en test som feiler hvis en rute mangler den |
-| Stored XSS i rik tekst stjeler sesjonen | Full lesetilgang til arkivet | Sanitering server-side, streng CSP, ingen tredjepartsskript — eventuelt sesjon i `httpOnly`-cookie ([§9.5](#95-om-å-lagre-sesjonen-i-localstorage)) |
+| Endepunkt glemmer `krevRolle()` | Det endepunktet er åpent for alle, og CSRF-vernet faller bort | Autorisasjon er nå kode, ikke konfigurasjon: felles hjelper som også håndhever `Content-Type`, egne tester, og en test som feiler hvis en rute mangler den |
+| Stored XSS i rik tekst | Skript kan handle som den innloggede så lenge fanen er åpen | Sanitering server-side, streng CSP, ingen tredjepartsskript. `httpOnly`-kapselen hindrer at sesjonen kan stjeles og brukes senere, men ikke angrepet i seg selv ([§9.6](#96-xss-er-fortsatt-den-viktige-risikoen)) |
 | Engangskode brute-forces | Uvedkommende kommer inn | Maks 5 forsøk per kode, maks 5 bestillinger per adresse per time, 10 min utløp |
 | Kodene havner i søppelpost | Ingen får logget inn | Verifisert avsenderdomene, ikke den Azure-genererte adressen |
 | Utranskodet video lastes opp | Lagring ×80, treg opplasting og avspilling | Fast rutine med `ffmpeg`, størrelsesadvarsel i GUI, kostnadsvarsling på kontoen |
@@ -783,10 +830,7 @@ fase 1 dekker behovet.
    Actions-arbeidsflyten.
 4. **Bygg trinn 1–4** av fase 1 og se på resultatet før resten planlegges i detalj — den
    første ekte årssiden pleier å endre meningen om ganske mye.
-5. **Bestem hvor sesjonen skal ligge** — `localStorage` som i deres øvrige løsninger,
-   eller en `httpOnly`-cookie ([§9.5](#95-om-å-lagre-sesjonen-i-localstorage)). Valget
-   påvirker bare noen linjer i API-et og klienten, men er lettest å ta nå.
-6. **Sett opp avsenderdomenet for e-post tidlig.** Domeneverifisering tar gjerne et døgn
+5. **Sett opp avsenderdomenet for e-post tidlig.** Domeneverifisering tar gjerne et døgn
    på grunn av DNS, og uten den havner engangskodene i søppelpost. Det er den enkleste
    måten å bli forsinket på i trinn 9.
 
