@@ -74,19 +74,26 @@ npm install          # verktøy i rotmappa
 npm run installer    # avhengigheter i app/ og api/, og api/local.settings.json
 ```
 
-Deretter, i tre skall:
+Deretter, i to skall:
 
 ```bash
-npm run azurite      # lokal Blob- og Table-emulator
-npm run seed         # felter.json + 36 eksempelår
-npm run dev          # bygger API-et og starter SWA CLI
+npm run dev          # skall 1: Azurite, bygger API-et, starter SWA CLI
+npm run seed         # skall 2: felter.json + 36 eksempelår (første gang)
 ```
 
 Åpne <http://localhost:4280>. Eksempelårene har den formen materialet deres
 faktisk har: tynt før 1950, fire til ti år per tiår etterpå.
 
-`npm run dev` bygger API-et først med vilje: `swa start` bygger det ikke selv, og
-uten `api/dist` finner Functions ingenting å kjøre.
+`npm run dev` gjør tre ting med vilje:
+
+- **starter Azurite**, fordi Functions-verten bruker den som lagring. Kjører den
+  ikke, feiler `func` med «Exception has been thrown by the target of an
+  invocation», som ikke sier noe om årsaken
+- **bygger API-et først**, fordi `swa start` ikke gjør det selv, og uten
+  `api/dist` finner Functions ingenting å kjøre
+- **stopper alt sammen** når du avslutter med Ctrl+C
+
+Vil du styre Azurite selv, finnes `npm run azurite` og `npm run dev:kun-swa`.
 
 ### Hvis noe klikker
 
@@ -101,7 +108,8 @@ uten `api/dist` finner Functions ingenting å kjøre.
 | Node 22-installasjonsprogrammet nekter, «a newer version is already installed» | Windows går ikke bakover. Avinstaller først: `winget uninstall --id OpenJS.NodeJS.LTS` i PowerShell som administrator, eller Innstillinger → Apper. Åpne så et **nytt** skall — PATH oppdateres ikke i vinduer som allerede står åpne |
 | `EPERM: operation not permitted, rmdir …\AppData\Roaming\npm\…` | En rest fra en avbrutt global installasjon. Lukk kjørende `func`-prosesser, slett mappa manuelt, og bruk heller winget på Windows |
 | «Could not connect to http://localhost:5173» | Frontenden startet ikke. Se etter feilen rett over i loggen |
-| Azurite svarer ikke | Kjører den i et eget skall? `npm run azurite` |
+| `Exception has been thrown by the target of an invocation` | Kommer fra `func`, ikke fra SWA CLI. Nesten alltid at Azurite ikke kjører. `npm run dev` starter den nå selv. For den ekte feilmeldingen: `cd api` og `func start` |
+| Azurite svarer ikke | `npm run dev` starter den. Kjører du `dev:kun-swa`, må du starte `npm run azurite` selv |
 
 `api/local.settings.json` er gitignorert, siden det er der ekte nøkler havner
 den dagen noen legger inn en. Derfor lages den av `npm run installer` fra
@@ -111,7 +119,8 @@ den dagen noen legger inn en. Derfor lages den av `npm run installer` fra
 
 | Kommando | Gjør |
 |---|---|
-| `npm run dev` | Bygger API-et og starter SWA CLI: frontend, API og ruting samlet |
+| `npm run dev` | Azurite, bygger API-et, og starter SWA CLI — alt i ett |
+| `npm run dev:kun-swa` | Samme uten Azurite, hvis du vil styre den selv |
 | `npm run seed` | Legger eksempeldata i Azurite |
 | `npm run seed:sky` | Samme, men mot Azure (henter nøkkel via `az`) |
 | `npm run proev` | Røykprøve av API-et mot Azurite |

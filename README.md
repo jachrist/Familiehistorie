@@ -19,10 +19,11 @@ og **Azure Functions Core Tools v4**
 
 ```bash
 npm install && npm run installer
-npm run azurite     # eget skall
-npm run seed        # eget skall
-npm run dev         # http://localhost:4280
+npm run dev         # skall 1: Azurite + API + frontend
+npm run seed        # skall 2: eksempeldata, første gang
 ```
+
+Åpne <http://localhost:4280>.
 
 - **Trinn 1** — Bicep og skript for lagringskonto, containere og Static Web App
 - **Trinn 2** — Vite + React + TypeScript, Azure Functions, delte typer, Azurite lokalt
