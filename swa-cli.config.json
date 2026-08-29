@@ -8,9 +8,9 @@
       "appDevserverUrl": "http://localhost:5173",
       "apiLanguage": "node",
       "apiVersion": "22",
-      "run": "npm run dev --prefix app",
-      "appBuildCommand": "npm run build --prefix app",
-      "apiBuildCommand": "npm run build --prefix api"
+      "run": "npm run dev",
+      "appBuildCommand": "npm run build",
+      "apiBuildCommand": "npm run build"
     }
   }
 }

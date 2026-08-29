@@ -9,7 +9,7 @@
     "watch": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "start": "npm run build && func start",
-    "clean": "rm -rf dist",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "proev": "npm run build && node roykprove.mjs"
   },
   "dependencies": {

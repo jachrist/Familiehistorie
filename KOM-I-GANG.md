@@ -19,11 +19,20 @@ git checkout claude/new-project-scope-elqj9d
 
 ## Lokalt
 
-Krever Node 22 og [Azure Functions Core Tools v4](https://learn.microsoft.com/azure/azure-functions/functions-run-local).
+Krever **Node 22** og **Azure Functions Core Tools v4**. Uten den siste prøver
+SWA CLI å laste den ned selv, noe som ofte feiler bak brannmur — installer den
+på forhånd:
+
+```bash
+npm i -g azure-functions-core-tools@4 --unsafe-perm true
+func --version        # skal vise 4.x
+```
+
+Så, fra rota av repoet:
 
 ```bash
 npm install          # verktøy i rotmappa
-npm run installer    # avhengigheter i app/ og api/
+npm run installer    # avhengigheter i app/ og api/, og api/local.settings.json
 ```
 
 Deretter, i tre skall:
@@ -31,22 +40,39 @@ Deretter, i tre skall:
 ```bash
 npm run azurite      # lokal Blob- og Table-emulator
 npm run seed         # felter.json + 36 eksempelår
-npm run dev          # SWA CLI på http://localhost:4280
+npm run dev          # bygger API-et og starter SWA CLI
 ```
 
 Åpne <http://localhost:4280>. Eksempelårene har den formen materialet deres
 faktisk har: tynt før 1950, fire til ti år per tiår etterpå.
 
+`npm run dev` bygger API-et først med vilje: `swa start` bygger det ikke selv, og
+uten `api/dist` finner Functions ingenting å kjøre.
+
+### Hvis noe klikker
+
+| Symptom | Årsak |
+|---|---|
+| `func` spør hvilket språk prosjektet er i (dotnet / Node / Python …) | `api/local.settings.json` mangler eller er tom. Kjør `npm run forbered` |
+| «Could not find or install Azure Functions Core Tools» | Installer den globalt, se over |
+| «Could not connect to http://localhost:5173» | Frontenden startet ikke. Se etter feilen rett over i loggen |
+| Azurite svarer ikke | Kjører den i et eget skall? `npm run azurite` |
+
+`api/local.settings.json` er gitignorert, siden det er der ekte nøkler havner
+den dagen noen legger inn en. Derfor lages den av `npm run installer` fra
+`local.settings.json.eksempel` i stedet for å ligge i repoet.
+
 ## Kommandoer
 
 | Kommando | Gjør |
 |---|---|
-| `npm run dev` | SWA CLI: frontend, API og ruting samlet |
+| `npm run dev` | Bygger API-et og starter SWA CLI: frontend, API og ruting samlet |
 | `npm run seed` | Legger eksempeldata i Azurite |
 | `npm run seed:sky` | Samme, men mot Azure (henter nøkkel via `az`) |
 | `npm run proev` | Røykprøve av API-et mot Azurite |
 | `npm run build` | Bygger `api/` og `app/` |
 | `npm run typecheck` | Typesjekker begge uten å bygge |
+| `npm run forbered` | Lager `api/local.settings.json` hvis den mangler |
 | `npm run clean` | Fjerner byggeutdata og lokal lagring |
 
 `npm run proev` skriver og sletter årene 1996–1999 og bygger indeksen på nytt.

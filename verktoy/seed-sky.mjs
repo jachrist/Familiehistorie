@@ -4,6 +4,7 @@
  * et bevisst valg å skrive til skyen.
  */
 import { execFileSync, execFileSync as kjor } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const RESSURSGRUPPE = process.env.RESSURSGRUPPE ?? "rg-familiehistorie";
 const PREFIKS = process.env.PREFIKS ?? "famhist";
@@ -29,7 +30,7 @@ const tilkobling = az(
 
 console.log(`Skriver til lagringskontoen ${LAGERNAVN} i ${RESSURSGRUPPE}.\n`);
 
-kjor(process.execPath, [new URL("./seed.mjs", import.meta.url).pathname], {
+kjor(process.execPath, [fileURLToPath(new URL("./seed.mjs", import.meta.url))], {
   stdio: "inherit",
   env: { ...process.env, LAGER_TILKOBLING: tilkobling },
 });
