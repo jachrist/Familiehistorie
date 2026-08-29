@@ -47,8 +47,14 @@ på feil versjon.
 **Azure Functions Core Tools v4.** Uten den prøver SWA CLI å laste den ned selv,
 noe som ofte feiler bak brannmur.
 
-På Windows er winget den enkleste veien — den henter et ferdig installasjonsprogram
-og går utenom npm:
+På Windows er **MSI-en fra GitHub** den mest pålitelige veien. Den går utenom
+både npm og winget, og gir nyeste versjon — winget ligger gjerne et par
+utgivelser etter:
+
+[github.com/Azure/azure-functions-core-tools/releases](https://github.com/Azure/azure-functions-core-tools/releases)
+→ nyeste v4 → **x64 MSI**
+
+Winget virker også, men kan gi en eldre versjon:
 
 ```powershell
 winget install Microsoft.Azure.FunctionsCoreTools
@@ -59,6 +65,10 @@ På macOS og Linux:
 ```bash
 npm i -g azure-functions-core-tools@4 --unsafe-perm true
 ```
+
+> Den globale npm-installasjonen er erfaringsmessig skjør på Windows — den kan
+> feile med `E401` eller `EPERM` og etterlate en halvferdig kopi som *starter*,
+> men faller over ved oppstart av verten. Bruk MSI-en der.
 
 Sjekk med `func --version` — den skal vise 4.14 eller nyere. Viser den en
 eldre 4.x, kan det være en halvferdig npm-installasjon; se
@@ -147,6 +157,7 @@ invocation», som ikke sier noe om årsaken. `--verbose` gir resten.
 | Node 22-installasjonsprogrammet nekter, «a newer version is already installed» | Windows går ikke bakover. Avinstaller først: `winget uninstall --id OpenJS.NodeJS.LTS` i PowerShell som administrator, eller Innstillinger → Apper. Åpne så et **nytt** skall — PATH oppdateres ikke i vinduer som allerede står åpne |
 | `EPERM: operation not permitted, rmdir …\AppData\Roaming\npm\…` | En rest fra en avbrutt global installasjon. Lukk kjørende `func`-prosesser, slett mappa manuelt, og bruk heller winget på Windows |
 | «Could not connect to http://localhost:5173» | Frontenden startet ikke. Se etter feilen rett over i loggen |
+| `func start` feiler uansett prosjekt | Sjekk om det er `func` eller prosjektet: `cd $env:TEMP; func init proev --worker-runtime node --model V4; cd proev; npm install; func start`. Feiler også det tomme prosjektet, ligger feilen i `func` eller på maskinen |
 | `func start` sier «Resolving worker runtime to 'node'» og deretter `Exception has been thrown by the target of an invocation` | `func` er sannsynligvis halvinstallert — en npm-installasjon som feilet underveis etterlater en kopi som starter, men mangler vertsfilene. Sjekk kilden med `Get-Command func \| Select-Object -ExpandProperty Source`. Peker den inn i `AppData\Roaming\npm\`, slett `$env:APPDATA\npm\node_modules\azure-functions-core-tools` og `$env:APPDATA\npm\func*`, installer med winget, og åpne et nytt skall |
 | `Exception has been thrown by the target of an invocation` | Kommer fra `func`, ikke fra SWA CLI. Nesten alltid at Azurite ikke kjører. `npm run dev` starter den nå selv. For den ekte feilmeldingen: `cd api` og `func start` |
 | «Azurite svarte ikke på port 10000» | Se hva Azurite selv sier: `npx azurite --location .azurite --skipApiVersionCheck`. Er porten opptatt av noe annet: `netstat -ano \| findstr :10000` på Windows |
