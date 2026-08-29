@@ -1,8 +1,8 @@
 import { app, type HttpRequest, type HttpResponseInit } from "@azure/functions";
 import { ulid } from "ulid";
 import { z } from "zod";
-import type { Opplastingsmaal, Opplastingssvar } from "../../../delt/typer.js";
-import { CONTAINER } from "../lager.js";
+import type { Aarsdokument, Opplastingsmaal, Opplastingssvar } from "../../../delt/typer.js";
+import { CONTAINER, STI, lesJson, listAarstall, listBlober, slettBlob } from "../lager.js";
 import { SKRIVE_MINUTTER, skriveUrl } from "../sas.js";
 import { AAR_MAKS, AAR_MIN, feil, json } from "../svar.js";
 import { krevRolle } from "../vakt.js";
@@ -87,5 +87,49 @@ app.http("mediaOpplasting", {
       utloper: new Date(Date.now() + SKRIVE_MINUTTER * 60_000).toISOString(),
     };
     return json(svar);
+  },
+});
+
+/**
+ * Sletter mediefiler ingen årsdokumenter viser til.
+ *
+ * Bevisst en oppryddingsoperasjon og ikke sletting per fil: fjerner man et bilde
+ * i redigeringen, forsvinner det fra årsdokumentet, men blobben blir liggende
+ * til man rydder. Da er «fjern» angrbart så lenge man ikke har lagret, og en
+ * sletting av et helt år tar ikke bildene med seg.
+ */
+app.http("mediaRydd", {
+  methods: ["POST"],
+  route: "vedlikehold/rydd-media",
+  authLevel: "anonymous",
+  handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
+    const nektet = krevRolle("redaktoer", req);
+    if (nektet) return nektet;
+
+    const aarstall = await listAarstall();
+    const dokumenter = await Promise.all(
+      aarstall.map((aar) => lesJson<Aarsdokument>(CONTAINER.innhold, STI.aar(aar)))
+    );
+
+    const brukt = new Set<string>();
+    for (const d of dokumenter) {
+      for (const m of d?.verdi.media ?? []) {
+        for (const sti of [m.fil, m.miniatyr, m.plakat]) {
+          if (sti) brukt.add(sti);
+        }
+      }
+    }
+
+    const alle = await listBlober(CONTAINER.media);
+    const ubrukte = alle.filter((sti) => !brukt.has(sti));
+
+    // Tørrkjøring med mindre klienten uttrykkelig ber om sletting.
+    const url = new URL(req.url);
+    if (url.searchParams.get("slett") !== "ja") {
+      return json({ ubrukte, slettet: 0, torrkjoring: true });
+    }
+
+    await Promise.all(ubrukte.map((sti) => slettBlob(CONTAINER.media, sti)));
+    return json({ ubrukte, slettet: ubrukte.length, torrkjoring: false });
   },
 });

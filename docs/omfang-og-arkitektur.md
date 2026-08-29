@@ -267,6 +267,12 @@ og er avledet data — kan alltid gjenskapes fra årsdokumentene via
   Nødvendig for video: SWA-ens managed functions har både størrelses- og
   tidsbegrensninger, og videostrømming trenger range-requests. Det har også en
   kostnadsside — se [§13](#kostnad).
+- **CORS-regler på lagringskontoen er en forutsetning, ikke en detalj.** Fordi
+  opplastingen skjer fra nettleseren til et annet opphav, blokkerer nettleseren
+  kallet før det sendes hvis reglene mangler — og da hjelper ingen SAS. Reglene
+  settes av `infra/main.bicep` i Azure, og av `verktoy/lager-oppsett.mjs` mot
+  Azurite lokalt. De må liste **hvert** opphav appen serveres fra, også et
+  eventuelt eget domene.
 - **Managed Identity** fra Function-laget mot lagringskontoen gjør at ingen
   lagringsnøkkel ligger i konfigurasjon eller kode.
 - **All adgangskontroll ligger i Functions-laget**, ikke i konfigurasjonsfilen — en
@@ -329,7 +335,7 @@ Alle endepunkter under `/api`. Skriveoperasjoner krever rollen `redaktoer`.
 | `PUT` | `/api/aar/{aar}` | redaktør | Opprett/oppdater. `If-Match: <etag>` for optimistisk låsing |
 | `DELETE` | `/api/aar/{aar}` | redaktør | Slett år (blob-versjonering gjør det angrbart) |
 | `POST` | `/api/media/opplasting` | redaktør | Tar en liste med filnavn + MIME-typer, returnerer skrive-SAS (15 min) per fil |
-| `DELETE` | `/api/media/{aar}/{id}` | redaktør | Slett mediefil og alle avledede filer |
+| `POST` | `/api/vedlikehold/rydd-media` | redaktør | Sletter mediefiler ingen årsdokumenter viser til. Tørrkjøring uten `?slett=ja` |
 | `POST` | `/api/vedlikehold/bygg-indeks` | redaktør | Bygg `indeks.json` på nytt fra alle årsdokumenter |
 | `POST` | `/api/auth/kode` | åpen | Ber om engangskode på e-post. Svarer alltid `202` ([§9.3](#93-innloggingsflyten)) |
 | `POST` | `/api/auth/verifiser` | åpen | Bytter kode mot sesjon; setter `fh_sesjon`-kapselen |
@@ -341,6 +347,12 @@ Alle endepunkter under `/api`. Skriveoperasjoner krever rollen `redaktoer`.
 At `/api/media/opplasting` tar en **liste** og ikke én fil er en liten detalj med stor
 effekt: den lar redigerings-GUI-et hente SAS for 30 filer i ett kall og laste dem opp
 parallelt.
+
+**Sletting av media er en oppryddingsoperasjon, ikke en handling per fil.** Fjerner man
+et bilde i redigeringen, forsvinner det fra årsdokumentet, men blobben blir liggende til
+noen rydder. Det gjør «fjern» angrbart så lenge man ikke har lagret, og gjør at sletting
+av et helt år ikke tar bildene med seg. Prisen er at man må rydde av og til; en god
+byttehandel for et familiearkiv.
 
 **Samtidighet.** `GET /api/aar/{aar}` returnerer blobens ETag. `PUT` sender den tilbake
 i `If-Match`; hvis noe annet har lagret i mellomtiden svarer API-et `412` og klienten

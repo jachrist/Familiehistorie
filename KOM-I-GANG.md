@@ -1,6 +1,6 @@
 # Kom i gang
 
-Status: **fase 1, trinn 1–4** av [faseplanen](docs/omfang-og-arkitektur.md#14-faseplan).
+Status: **fase 1, trinn 1–7** av [faseplanen](docs/omfang-og-arkitektur.md#14-faseplan).
 
 > **Nettstedet har ingen innlogging ennå.** Den kommer i trinn 9. Alt som legges
 > inn før den er på plass, er lesbart for enhver som finner adressen. Ikke last
@@ -221,12 +221,20 @@ livssyklusregler. Static Web App på gratisplanen.
 **Trinn 4 — forsiden.** Årsliste gruppert på tiår, utfolding på stedet,
 permalenker på `/aar/1972` som ruller året til syne ved innlasting.
 
+**Trinn 5 — årsside.** Tekstfeltene i skjemaets rekkefølge og mediegalleri med
+bilder og video, hentet når raden åpnes.
+
+**Trinn 6 — redigering.** `/rediger/1972` og `/rediger/nytt`. Skjemaet genereres
+fra `felter.json`. Rik tekst med fire knapper. Autolagring til `localStorage`
+hvert par sekunder, med gjenoppretting. ETag-konflikt håndteres eksplisitt.
+
+**Trinn 7 — masseopplasting.** Slipp mange filer om gangen. Bilder skaleres til
+2400 px og får miniatyr i nettleseren, opptaksdato leses fra EXIF og foreslår
+årstall. Skrive-SAS for hele bunken i ett kall, tre opplastinger parallelt,
+fremdrift per fil, blokkvis over 8 MB. Bildetekstliste med rekkefølge.
+
 ## Hva som bevisst ikke virker ennå
 
-- **Feltinnhold og mediegalleri** på årssiden — trinn 5. Utfoldingen viser
-  inntil videre ingressen fra indeksdokumentet.
-- **Redigering** — trinn 6 og 7. API-et tar imot skriving, men det finnes ingen
-  GUI for det.
 - **Søk** — trinn 8. Indeksdokumentet inneholder allerede den søkbare teksten.
 - **Innlogging** — trinn 9. `api/src/vakt.ts` har formen på plass og slipper alt
   gjennom; konstanten `INNLOGGING_MANGLER` markerer stedet.

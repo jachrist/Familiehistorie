@@ -2,10 +2,16 @@
  * Typet klient mot /api.
  *
  * Ingen sesjonshåndtering her: fra trinn 9 ligger sesjonen i en
- * httpOnly-kapsel som nettleseren sender selv. `credentials: "same-origin"` er
- * standard, men skrives ut for å gjøre det tydelig at det er meningen.
+ * httpOnly-kapsel som nettleseren sender selv.
  */
-import type { AarsdokumentMedUrl, Feltskjema, Indeks } from "../../../delt/typer.js";
+import type {
+  AarsdokumentInn,
+  AarsdokumentMedUrl,
+  Feltskjema,
+  Indeks,
+  Opplastingsforesporsel,
+  Opplastingssvar,
+} from "../../../delt/typer.js";
 
 export class Apifeil extends Error {
   constructor(
@@ -15,6 +21,10 @@ export class Apifeil extends Error {
   ) {
     super(melding);
     this.name = "Apifeil";
+  }
+  /** Sann når året er endret et annet sted siden vi hentet det. */
+  get erKonflikt() {
+    return this.status === 409 || this.status === 412;
   }
 }
 
@@ -39,11 +49,45 @@ async function hent<T>(sti: string, init?: RequestInit): Promise<T> {
     throw new Apifeil(svar.status, melding, detaljer);
   }
 
+  if (svar.status === 204) return undefined as T;
   return (await svar.json()) as T;
 }
+
+const JSONHODER = { "content-type": "application/json" };
 
 export const api = {
   indeks: () => hent<Indeks>("/api/indeks"),
   felter: () => hent<Feltskjema>("/api/felter"),
   aar: (aar: number) => hent<AarsdokumentMedUrl>(`/api/aar/${aar}`),
+
+  /** `etag` utelates ved oppretting; da avviser API-et hvis året finnes. */
+  lagreAar: (aar: number, dok: AarsdokumentInn, etag?: string) =>
+    hent<AarsdokumentMedUrl>(`/api/aar/${aar}`, {
+      method: "PUT",
+      headers: etag ? { ...JSONHODER, "If-Match": etag } : JSONHODER,
+      body: JSON.stringify(dok),
+    }),
+
+  slettAar: (aar: number) =>
+    hent<{ slettet: number }>(`/api/aar/${aar}`, { method: "DELETE" }),
+
+  opplastingsmaal: (foresporsel: Opplastingsforesporsel) =>
+    hent<Opplastingssvar>("/api/media/opplasting", {
+      method: "POST",
+      headers: JSONHODER,
+      body: JSON.stringify(foresporsel),
+    }),
+
+  ryddMedia: (slett: boolean) =>
+    hent<{ ubrukte: string[]; slettet: number; torrkjoring: boolean }>(
+      `/api/vedlikehold/rydd-media${slett ? "?slett=ja" : ""}`,
+      { method: "POST", headers: JSONHODER, body: "{}" }
+    ),
+};
+
+/** Nøkler for TanStack Query. Samlet ett sted så invalidering blir presis. */
+export const noekler = {
+  indeks: ["indeks"] as const,
+  felter: ["felter"] as const,
+  aar: (aar: number) => ["aar", aar] as const,
 };

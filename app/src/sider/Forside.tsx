@@ -1,8 +1,9 @@
 import { useMemo, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import type { Indeks, Indeksrad } from "../../../delt/typer.js";
-import { api } from "../api/klient.js";
-import { useHent } from "../api/bruk.js";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import type { Indeksrad } from "../../../delt/typer.js";
+import { Apifeil, api, noekler } from "../api/klient.js";
 import { AarRad } from "../komponenter/AarRad.js";
 import { TiaarsGruppe } from "../komponenter/TiaarsGruppe.js";
 
@@ -25,7 +26,7 @@ function grupperPaaTiaar(rader: Indeksrad[]): Gruppe[] {
 }
 
 export function Forside() {
-  const tilstand = useHent<Indeks>(() => api.indeks());
+  const tilstand = useQuery({ queryKey: noekler.indeks, queryFn: api.indeks });
   const { aar: aarParam } = useParams();
   const naviger = useNavigate();
 
@@ -36,8 +37,8 @@ export function Forside() {
   const apentAar = aarParam ? Number(aarParam) : undefined;
 
   const grupper = useMemo(
-    () => (tilstand.status === "klar" ? grupperPaaTiaar(tilstand.data.aar) : []),
-    [tilstand]
+    () => (tilstand.data ? grupperPaaTiaar(tilstand.data.aar) : []),
+    [tilstand.data]
   );
 
   function veksle(aar: number) {
@@ -51,21 +52,24 @@ export function Forside() {
       <header className="topp">
         <p className="stempel">Familien Christiansen</p>
         <h1>Familiehistorie</h1>
-        <p className="ingress">
-          Ett år, én side. Velg et årstall for å folde det ut.
-        </p>
+        <div className="topp-rad">
+          <p className="ingress">Ett år, én side. Velg et årstall for å folde det ut.</p>
+          <Link to="/rediger/nytt" className="knapp">
+            Nytt år
+          </Link>
+        </div>
       </header>
 
-      {tilstand.status === "laster" && (
+      {tilstand.isPending && (
         <p className="beskjed" role="status">
           Henter årene …
         </p>
       )}
 
-      {tilstand.status === "feil" && (
+      {tilstand.isError && (
         <div className="beskjed beskjed-feil" role="alert">
-          <p>{tilstand.feil.message}</p>
-          {tilstand.feil.status === 503 && (
+          <p>{tilstand.error.message}</p>
+          {tilstand.error instanceof Apifeil && tilstand.error.status === 503 && (
             <p className="beskjed-hjelp">
               Kjør <code>npm run seed</code> for å legge inn feltdefinisjonene.
             </p>
@@ -73,12 +77,12 @@ export function Forside() {
         </div>
       )}
 
-      {tilstand.status === "klar" && grupper.length === 0 && (
+      {tilstand.isSuccess && grupper.length === 0 && (
         <div className="beskjed">
           <p>Ingen år er lagt inn ennå.</p>
           <p className="beskjed-hjelp">
-            Kjør <code>npm run seed</code> for å få inn noen eksempelår, eller opprett det
-            første året når redigeringen kommer i trinn 6.
+            Kjør <code>npm run seed</code> for eksempelår, eller{" "}
+            <Link to="/rediger/nytt">opprett det første året</Link>.
           </p>
         </div>
       )}
@@ -98,9 +102,7 @@ export function Forside() {
       ))}
 
       <footer className="bunn">
-        <p>
-          Trinn 1–4 av fase 1. Søk kommer i trinn 8, innlogging i trinn 9.
-        </p>
+        <p>Trinn 1–7 av fase 1. Søk kommer i trinn 8, innlogging i trinn 9.</p>
       </footer>
     </main>
   );

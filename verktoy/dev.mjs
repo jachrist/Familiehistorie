@@ -121,5 +121,15 @@ if (await svarerPaa(AZURITE_PORT)) {
   console.log(`▸ Azurite lytter på ${AZURITE_PORT}.\n`);
 }
 
+// Uten CORS-regler blokkerer nettleseren opplasting direkte til Blob.
+try {
+  const { settCors } = await import("./lager-oppsett.mjs");
+  await settCors();
+  console.log("▸ CORS-regler satt på Azurite.\n");
+} catch (e) {
+  console.error("⚠ Klarte ikke sette CORS på Azurite:", e.message);
+  console.error("  Opplasting av media vil bli blokkert av nettleseren.\n");
+}
+
 console.log("▸ Starter Static Web Apps CLI …\n");
 start("SWA CLI", "npx", ["swa", "start"]);

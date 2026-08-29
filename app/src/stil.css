@@ -246,3 +246,567 @@ code {
     scroll-behavior: auto !important;
   }
 }
+
+/* ===================================================================
+   Trinn 5 — årsinnhold og mediegalleri
+   =================================================================== */
+
+.innhold {
+  padding-top: 4px;
+}
+.beskjed-liten {
+  margin: 8px 0;
+  color: var(--blekk-matt);
+  font-size: 14px;
+}
+.beskjed-liten.beskjed-feil {
+  color: var(--varsel);
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.innhold-tomt {
+  margin: 0 0 12px;
+  color: var(--blekk-matt);
+  font-style: italic;
+}
+
+.felt {
+  margin: 0 0 20px;
+  max-width: 58ch;
+}
+.felt h3 {
+  margin: 0 0 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blekk-matt);
+}
+.felt-tekst {
+  color: var(--blekk-svak);
+}
+.felt-tekst p {
+  margin: 0 0 10px;
+}
+.felt-tekst p:last-child {
+  margin-bottom: 0;
+}
+.felt-tekst a {
+  color: var(--aksent);
+}
+.felt-tekst ul,
+.felt-tekst ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+.felt-kort {
+  margin: 0 0 12px;
+  color: var(--blekk-svak);
+  max-width: 58ch;
+}
+.felt-etikett {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blekk-matt);
+}
+
+.galleri {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+  margin: 20px 0 0;
+}
+.galleri-post {
+  margin: 0;
+}
+.galleri-post img,
+.galleri-post video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  background: var(--flate-2);
+}
+.galleri-video {
+  grid-column: 1 / -1;
+  max-width: 620px;
+}
+.galleri-post figcaption {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--blekk-svak);
+  line-height: 1.45;
+}
+.galleri-dato {
+  display: block;
+  color: var(--blekk-matt);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.galleri-feil {
+  padding: 28px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--blekk-matt);
+  background: var(--flate-2);
+  border-radius: var(--radius);
+}
+
+.innhold-bunn {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 24px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--strek-svak);
+}
+.innhold-endret {
+  font-size: 12.5px;
+  color: var(--blekk-matt);
+}
+
+/* ===================================================================
+   Knapper og felles skjemadeler
+   =================================================================== */
+
+.knapp,
+.knapp-sekundaer,
+.knapp-lenke {
+  display: inline-block;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+}
+.knapp {
+  background: var(--aksent);
+  color: #fff;
+}
+.knapp:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.knapp:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.knapp-sekundaer {
+  background: var(--flate);
+  color: var(--blekk);
+  border-color: var(--strek);
+}
+.knapp-sekundaer:hover {
+  background: var(--flate-2);
+}
+.knapp-lenke {
+  padding: 0;
+  color: var(--aksent);
+  background: none;
+}
+.lenkeknapp {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--aksent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.knapp:focus-visible,
+.knapp-sekundaer:focus-visible,
+.knapp-lenke:focus-visible,
+.lenkeknapp:focus-visible {
+  outline: 2px solid var(--aksent);
+  outline-offset: 2px;
+}
+
+.topp-rad {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.topp-rad .ingress {
+  margin: 12px 0 0;
+}
+.topp-smal {
+  padding-bottom: 20px;
+}
+.topp-smal .stempel a {
+  color: inherit;
+}
+.beskjed-merk {
+  border-left: 3px solid var(--aksent);
+  background: var(--aksent-svak);
+}
+.beskjed-liste {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 14px;
+}
+.skjult {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ===================================================================
+   Trinn 6 — redigeringsskjema
+   =================================================================== */
+
+.skjema {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 28px;
+}
+.felt-rad {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.felt-rad > label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.paakrevd {
+  color: var(--varsel);
+}
+.felt-hjelp {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--blekk-matt);
+}
+.felt-feil {
+  font-size: 12.5px;
+  color: var(--varsel);
+}
+.skjema input[type="text"],
+.skjema input[type="number"],
+.skjema input[type="date"] {
+  font: inherit;
+  font-size: 15px;
+  padding: 9px 12px;
+  border: 1px solid var(--strek);
+  border-radius: 6px;
+  background: var(--flate);
+  color: var(--blekk);
+  max-width: 100%;
+}
+.skjema input:focus-visible,
+.rik-felt:focus-visible {
+  outline: 2px solid var(--aksent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.aarstall-felt {
+  max-width: 9ch;
+  font-variant-numeric: tabular-nums;
+}
+
+.rik {
+  border: 1px solid var(--strek);
+  border-radius: 6px;
+  background: var(--flate);
+  overflow: hidden;
+}
+.rik-verktoy {
+  display: flex;
+  gap: 2px;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--strek-svak);
+  background: var(--flate-2);
+}
+.rik-verktoy button {
+  font: inherit;
+  font-size: 13px;
+  min-width: 28px;
+  height: 26px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--blekk-svak);
+  cursor: pointer;
+}
+.rik-verktoy button:hover {
+  background: var(--aksent-svak);
+  color: var(--aksent);
+}
+.rik-verktoy button:focus-visible {
+  outline: 2px solid var(--aksent);
+  outline-offset: -1px;
+}
+.rik-verktoy .fet {
+  font-weight: 700;
+}
+.rik-verktoy .kursiv {
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+.rik-felt {
+  min-height: 90px;
+  padding: 11px 12px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.rik-felt p {
+  margin: 0 0 8px;
+}
+.rik-felt ul,
+.rik-felt ol {
+  margin: 0 0 8px;
+  padding-left: 22px;
+}
+
+.skjema-bunn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid var(--strek);
+}
+.skjema-status {
+  font-size: 12.5px;
+  color: var(--blekk-matt);
+}
+
+/* ===================================================================
+   Trinn 7 — opplasting og bildetekstliste
+   =================================================================== */
+
+.slipp {
+  border: 1.5px dashed var(--strek);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  background: var(--flate);
+  text-align: center;
+}
+.slipp-over {
+  border-color: var(--aksent);
+  background: var(--aksent-svak);
+}
+.slipp-tekst {
+  margin: 0;
+  font-size: 15px;
+}
+.slipp-velg {
+  color: var(--aksent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.slipp-velg input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.slipp-hjelp {
+  margin: 8px auto 0;
+  max-width: 52ch;
+  font-size: 12.5px;
+  color: var(--blekk-matt);
+  line-height: 1.5;
+}
+
+.koe {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--strek-svak);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.koe-post {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  background: var(--flate);
+  font-size: 13px;
+}
+.koe-navn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.koe-status {
+  color: var(--blekk-matt);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.koe-feil .koe-status {
+  color: var(--varsel);
+  white-space: normal;
+  text-align: right;
+}
+.koe-ferdig .koe-status {
+  color: var(--aksent);
+}
+.koe-stolpe {
+  grid-column: 1 / -1;
+  height: 3px;
+  background: var(--strek-svak);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.koe-stolpe span {
+  display: block;
+  height: 100%;
+  background: var(--aksent);
+  transition: width 0.2s ease-out;
+}
+
+.medieliste h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.medieliste .antall {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--blekk-matt);
+  font-variant-numeric: tabular-nums;
+}
+.medieliste ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--strek-svak);
+  border: 1px solid var(--strek-svak);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.medie {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 12px;
+  background: var(--flate);
+}
+.medie-bilde {
+  width: 56px;
+  height: 56px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--flate-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.medie-bilde img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.medie-merke {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blekk-matt);
+}
+.medie-felter {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.medie-felter input[type="text"] {
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 9px;
+  border: 1px solid var(--strek);
+  border-radius: 5px;
+  background: var(--grunn);
+  color: var(--blekk);
+}
+.medie-rad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--blekk-matt);
+  flex-wrap: wrap;
+}
+.medie-rad input[type="date"] {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 3px 6px;
+  border: 1px solid var(--strek);
+  border-radius: 4px;
+  background: var(--grunn);
+  color: var(--blekk);
+}
+.medie-sti {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+}
+.medie-knapper {
+  display: flex;
+  gap: 2px;
+}
+.medie-knapper button {
+  font: inherit;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--strek);
+  border-radius: 4px;
+  background: var(--flate);
+  color: var(--blekk-svak);
+  cursor: pointer;
+}
+.medie-knapper button:hover:not(:disabled) {
+  background: var(--aksent-svak);
+  color: var(--aksent);
+}
+.medie-knapper button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.medie-fjern:hover:not(:disabled) {
+  color: var(--varsel) !important;
+  background: var(--varsel-svak) !important;
+}
+.medieliste-hjelp {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--blekk-matt);
+  max-width: 60ch;
+}
+
+@media (max-width: 560px) {
+  .medie {
+    grid-template-columns: 44px 1fr;
+  }
+  .medie-knapper {
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+}

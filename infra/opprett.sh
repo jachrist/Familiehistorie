@@ -80,6 +80,16 @@ az staticwebapp appsettings set \
 URL=$(az staticwebapp show --name "$SWA_NAVN" --resource-group "$RESSURSGRUPPE" \
   --query defaultHostname -o tsv)
 
+echo "▸ Setter CORS-regler for https://$URL"
+# Nettleseren laster opp media direkte til Blob. Uten CORS blokkerer den kallet
+# før det sendes. Adressen er ikke kjent før Static Web App-en er opprettet,
+# derfor en ny kjøring av malen her.
+az deployment group create \
+  --resource-group "$RESSURSGRUPPE" \
+  --template-file "$kilde/main.bicep" \
+  --parameters prefiks="$PREFIKS" sted="$STED" tillatteOpphav="[\"https://$URL\"]" \
+  --output none
+
 cat <<OPPSUMMERING
 
 Ferdig.
@@ -92,6 +102,9 @@ Neste steg
   1. Legg felter.json inn i innhold-containeren:
        npm run seed:sky
   2. Push til $GREN, så bygger og utruller GitHub Actions.
+  3. Legger dere på et eget domene senere, må det inn i CORS-reglene:
+       az deployment group create -g $RESSURSGRUPPE --template-file infra/main.bicep \\
+         --parameters prefiks=$PREFIKS tillatteOpphav='["https://$URL","https://eget.domene"]' 
 
 ⚠ Nettstedet har ingen innlogging før trinn 9. Ikke last opp ekte
   familiebilder før den er på plass.

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Indeksrad } from "../../../delt/typer.js";
+import { Aarsinnhold } from "./Aarsinnhold.js";
 
 interface Props {
   rad: Indeksrad;
@@ -47,15 +48,9 @@ export function AarRad({ rad, apen, rullTil, onVeksle }: Props) {
       </button>
 
       <div id={panelId} role="region" aria-labelledby={knappId} hidden={!apen} className="aar-panel">
-        {rad.sammendrag ? (
-          <p className="aar-sammendrag">{rad.sammendrag}</p>
-        ) : (
-          <p className="aar-tom">Dette året har ingen ingress ennå.</p>
-        )}
-        <p className="aar-merknad">
-          Tekstfeltene og mediegalleriet kommer i trinn 5. Forsiden viser inntil videre det
-          indeksdokumentet inneholder.
-        </p>
+        {rad.sammendrag && <p className="aar-sammendrag">{rad.sammendrag}</p>}
+        {/* Årsdokumentet hentes først når raden faktisk åpnes. */}
+        {apen && <Aarsinnhold aar={rad.aar} />}
       </div>
     </div>
   );

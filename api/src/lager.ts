@@ -178,3 +178,12 @@ async function stromTilTekst(strom: NodeJS.ReadableStream | undefined): Promise<
   }
   return Buffer.concat(biter).toString("utf8");
 }
+
+/** Alle blobstier i en container, med valgfritt prefiks. */
+export async function listBlober(containernavn: string, prefiks = ""): Promise<string[]> {
+  const navn: string[] = [];
+  for await (const blob of container(containernavn).listBlobsFlat({ prefix: prefiks })) {
+    navn.push(blob.name);
+  }
+  return navn;
+}

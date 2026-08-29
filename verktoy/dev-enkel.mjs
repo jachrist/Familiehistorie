@@ -98,6 +98,16 @@ if (await svarerPaa(10000)) {
   console.log("▸ Azurite lytter på 10000.\n");
 }
 
+// Uten CORS-regler blokkerer nettleseren opplasting direkte til Blob.
+try {
+  const { settCors } = await import("./lager-oppsett.mjs");
+  await settCors();
+  console.log("▸ CORS-regler satt på Azurite.\n");
+} catch (e) {
+  console.error("⚠ Klarte ikke sette CORS på Azurite:", e.message);
+  console.error("  Opplasting av media vil bli blokkert av nettleseren.\n");
+}
+
 console.log("▸ Starter lokal API-tjener …");
 start("API-tjener", process.execPath, ["lokal-tjener.mjs"], { cwd: join(rot, "api") });
 if (!(await ventPaaPort(7071, 20_000))) {

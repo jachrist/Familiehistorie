@@ -12,6 +12,9 @@ param prefiks string
 @description('Region. Lagring og Static Web App trenger ikke ligge i samme region.')
 param sted string = resourceGroup().location
 
+@description('Opphav nettleseren laster opp media fra. Static Web App-adressen, og et eventuelt eget domene.')
+param tillatteOpphav array = []
+
 @description('Antall dager slettede blober kan gjenopprettes.')
 @minValue(1)
 @maxValue(365)
@@ -42,6 +45,21 @@ resource blobtjeneste 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01
   parent: lager
   name: 'default'
   properties: {
+    // Nettleseren laster opp media direkte til Blob, utenom API-et. Uten
+    // CORS-regler blokkerer den kallet før det sendes, og SAS-en er irrelevant.
+    // Hodene under er de opplastingen faktisk sender – se
+    // app/src/media/opplasting.ts.
+    cors: {
+      corsRules: empty(tillatteOpphav) ? [] : [
+        {
+          allowedOrigins: tillatteOpphav
+          allowedMethods: ['GET', 'HEAD', 'PUT', 'OPTIONS']
+          allowedHeaders: ['x-ms-blob-type', 'x-ms-blob-content-type', 'x-ms-version', 'content-type']
+          exposedHeaders: ['ETag', 'x-ms-request-id']
+          maxAgeInSeconds: 3600
+        }
+      ]
+    }
     // Versjonering gir angrerett på feilredigering uten at appen må bygge
     // versjonshistorikk selv.
     isVersioningEnabled: true
