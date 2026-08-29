@@ -9,6 +9,27 @@ I tillegg skal det være en søkeboks der en kan søke i alle tekster på sidene
 ### Plattform og arkitektur 
 Jeg ønsker å benytte min vanlige arkitektur - Azure Static Web app for sider, api-lag, lagring i Blob storage.
 
+### Status
+**Fase 1, trinn 1–4 er bygget.** Oppsett, kommandoer og hva som virker:
+[KOM-I-GANG.md](KOM-I-GANG.md).
+
+```bash
+npm install && npm run installer
+npm run azurite     # eget skall
+npm run seed        # eget skall
+npm run dev         # http://localhost:4280
+```
+
+- **Trinn 1** — Bicep og skript for lagringskonto, containere og Static Web App
+- **Trinn 2** — Vite + React + TypeScript, Azure Functions, delte typer, Azurite lokalt
+- **Trinn 3** — åtte API-endepunkter med ETag-samtidighet, validering fra
+  `felter.json`, sanitering server-side og kortlevde SAS-URL-er
+- **Trinn 4** — forsiden: årsliste gruppert på tiår, utfolding på stedet, permalenker
+
+Trinn 5–11 gjenstår. `npm run proev` kjører en røykprøve av API-et mot Azurite.
+
+> **Ingen innlogging før trinn 9.** Ikke last opp ekte familiebilder ennå.
+
 ### Omfang og implementering
 Et gjennomarbeidet forslag til avgrensing, informasjonsmodell, arkitektur og faseplan
 ligger i **[docs/omfang-og-arkitektur.md](docs/omfang-og-arkitektur.md)**.

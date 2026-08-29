@@ -1,0 +1,248 @@
+/*
+ * Cyanotypi: dyp preusserblå på kjølig papir. Fargeverdenen er hentet fra den
+ * eldste fotografiske kopieringsprosessen, som passer et bildearkiv bedre enn
+ * en nøytral gråtone.
+ *
+ * Systemskrifter med vilje: ingen eksterne forespørsler, ingenting å vente på,
+ * og en CSP som kan stå på `default-src 'self'`.
+ */
+
+:root {
+  --grunn: #eef1f6;
+  --flate: #ffffff;
+  --flate-2: #e4e9f1;
+  --blekk: #101b2d;
+  --blekk-svak: #56657d;
+  --blekk-matt: #8493a8;
+  --strek: #cbd5e3;
+  --strek-svak: #dde4ee;
+  --aksent: #14508c;
+  --aksent-svak: #dce6f4;
+  --varsel: #9a5233;
+  --varsel-svak: #f3e6de;
+  --radius: 8px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grunn: #0b1018;
+    --flate: #131c29;
+    --flate-2: #1a2536;
+    --blekk: #e3e9f1;
+    --blekk-svak: #96a6bc;
+    --blekk-matt: #6c7e96;
+    --strek: #28344a;
+    --strek-svak: #1e2837;
+    --aksent: #74aae4;
+    --aksent-svak: #1b2a3e;
+    --varsel: #ce8a63;
+    --varsel-svak: #2c2119;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--grunn);
+  color: var(--blekk);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.side {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* --- topp --- */
+.topp {
+  padding: 56px 0 28px;
+  border-bottom: 1px solid var(--strek);
+}
+.stempel {
+  margin: 0 0 12px;
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--blekk-matt);
+}
+.topp h1 {
+  margin: 0;
+  font-size: clamp(32px, 7vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+.ingress {
+  margin: 12px 0 0;
+  color: var(--blekk-svak);
+  max-width: 46ch;
+}
+
+/* --- tiår --- */
+.tiaar {
+  margin-top: 36px;
+}
+.tiaar-hode {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blekk-matt);
+}
+.tiaar-strek {
+  flex: 1;
+  height: 1px;
+  background: var(--strek-svak);
+}
+.tiaar-antall {
+  font-variant-numeric: tabular-nums;
+}
+.tiaar-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--strek-svak);
+  border-top: 1px solid var(--strek-svak);
+  border-bottom: 1px solid var(--strek-svak);
+}
+
+/* --- årsrad --- */
+.aar {
+  background: var(--flate);
+}
+.aar[data-apen] {
+  background: var(--flate);
+  box-shadow: inset 3px 0 0 var(--aksent);
+}
+.aar-hode {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 14px 14px 16px;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.aar-hode:hover {
+  background: var(--aksent-svak);
+}
+.aar-hode:focus-visible {
+  outline: 2px solid var(--aksent);
+  outline-offset: -2px;
+}
+.aar-tall {
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  min-width: 3.6ch;
+}
+.aar-tittel {
+  flex: 1;
+  font-size: 15px;
+  color: var(--blekk-svak);
+  min-width: 0;
+}
+.aar-tittel em {
+  color: var(--blekk-matt);
+}
+.aar-media {
+  font-size: 12px;
+  color: var(--blekk-matt);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.aar-panel {
+  padding: 0 16px 20px calc(3.6ch + 32px);
+}
+.aar-panel[hidden] {
+  display: none;
+}
+.aar-sammendrag {
+  margin: 0 0 12px;
+  max-width: 58ch;
+  color: var(--blekk-svak);
+}
+.aar-tom {
+  margin: 0 0 12px;
+  color: var(--blekk-matt);
+  font-style: italic;
+}
+.aar-merknad {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--varsel);
+  background: var(--varsel-svak);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 13.5px;
+  color: var(--blekk-svak);
+  max-width: 58ch;
+}
+
+/* --- beskjeder --- */
+.beskjed {
+  margin: 36px 0;
+  padding: 20px 22px;
+  background: var(--flate);
+  border: 1px solid var(--strek);
+  border-radius: var(--radius);
+}
+.beskjed p {
+  margin: 0;
+}
+.beskjed p + p {
+  margin-top: 8px;
+}
+.beskjed-feil {
+  border-color: var(--varsel);
+  border-left-width: 3px;
+  background: var(--varsel-svak);
+}
+.beskjed-hjelp {
+  color: var(--blekk-svak);
+  font-size: 14.5px;
+}
+code {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--flate-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* --- bunn --- */
+.bunn {
+  margin-top: 56px;
+  padding-top: 20px;
+  border-top: 1px solid var(--strek);
+  font-size: 13px;
+  color: var(--blekk-matt);
+}
+.bunn p {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

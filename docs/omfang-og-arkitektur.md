@@ -279,20 +279,29 @@ og er avledet data — kan alltid gjenskapes fra årsdokumentene via
 Én lagringskonto, to containere — **begge private**:
 
 ```
-innhold/                    (private)
+innhold/                    (privat)
   felter.json               feltdefinisjonene fra §4.1
   indeks.json               forside + søkeindeks
+  tilgang.json              hvem som har tilgang (trinn 9)
   aar/1972.json
   aar/1973.json
   …
 
-media/                      (private)
+media/                      (privat)
   1972/01HQ….jpg            web-størrelse, nedskalert i nettleseren
   1972/01HQ….thumb.jpg      miniatyr, ca. 400 px
-  1972/01HQ….orig.jpg       original (Archive-nivå, valgfritt)
   1972/01HR….mp4            transkodet klipp
   1972/01HR….poster.jpg
+
+originaler/                 (privat, Archive-nivå)
+  1972/01HQ….jpg            bildeoriginal i full oppløsning
 ```
+
+**Hvorfor originalene har egen container.** Azures livssyklusregler treffer på
+sti, ikke på filendelse. En regel som arkiverte «alt under `media/`» ville tatt
+med web-versjonene og videoen appen faktisk serverer — og Archive-nivået må
+rehydreres i timevis før det kan leses. Med to containere kan en
+feilkonfigurert regel ikke ramme det som vises.
 
 I samme lagringskonto brukes i tillegg **Table Storage** til engangskoder, forsøkstellere
 og rate-limiting ([§9.3](#93-innloggingsflyten)) — kortlevd driftsdata som ikke hører
@@ -302,7 +311,7 @@ hjemme blant årsdokumentene.
 
 - **Blob-versjonering på** — gir angrerett på feilredigering og sletting uten at det må bygges versjonshistorikk i appen.
 - **Soft delete, 30 dager** — for både blob og container.
-- **Livssyklusregel**: originalbilder rett til Archive; tidligere versjoner til Cool etter 30 dager.
+- **Livssyklusregler**: hele `originaler`-containeren til Archive; tidligere versjoner til Cool etter 30 dager.
 - **Ingen anonym lesetilgang** på kontoen.
 - Redundans **LRS** holder når blob-versjonering og en separat kopi ([§13](#sikkerhetskopi)) er på plass; GRS hvis materialet oppleves som uerstattelig.
 
@@ -650,39 +659,43 @@ transkodet.
 
 ## 12. Repostruktur
 
+Slik den ser ut etter trinn 1–4. Se [KOM-I-GANG.md](../KOM-I-GANG.md) for hvordan
+den kjøres.
+
 ```
 Familiehistorie/
 ├─ README.md
-├─ docs/
-│  └─ omfang-og-arkitektur.md          ← dette dokumentet
+├─ KOM-I-GANG.md                        oppsett, kommandoer, status
+├─ docs/omfang-og-arkitektur.md         dette dokumentet
+├─ infra/                               trinn 1
+│  ├─ main.bicep                        lagringskonto, containere, tabell
+│  ├─ opprett.sh                        kjøres én gang
+│  └─ LES-MEG.md
 ├─ app/                                 Vite + React + TypeScript
-│  ├─ src/
-│  │  ├─ sider/            Forside, Aarsside, RedigerAar
-│  │  ├─ komponenter/      TiaarsGruppe, AarRad, Sokefelt, Mediegalleri,
-│  │  │                    Feltskjema, Opplastingskoe
-│  │  ├─ api/              typet klient mot /api, med sesjon
-│  │  ├─ auth/             innloggingsside, /api/meg ved oppstart, dyplenkeminne
-│  │  ├─ media/            nedskalering, EXIF, blokkvis opplasting
-│  │  └─ sok/              MiniSearch-oppsett og normalisering
-│  └─ index.html
+│  ├─ public/robots.txt                 skallet skal ikke indekseres
+│  └─ src/
+│     ├─ sider/            Forside
+│     ├─ komponenter/      TiaarsGruppe, AarRad
+│     ├─ api/              klient.ts, bruk.ts
+│     └─ stil.css
 ├─ api/                                 Azure Functions, TypeScript
-│  ├─ src/funksjoner/      aar.ts, media.ts, indeks.ts, felter.ts,
-│  │                      auth.ts, tilgang.ts
-│  ├─ src/auth/           token.ts, kapsel.ts, krevRolle.ts, otp.ts, epost.ts
-│  ├─ src/blob.ts          Blob-klient med Managed Identity
-│  ├─ src/tabell.ts        Table Storage: koder og rate-limiting
-│  └─ src/skjema.ts        Zod-validering + sanitering
-├─ delt/                                Typer delt mellom app og api
-│  └─ typer.ts
+│  ├─ src/funksjoner/      felter.ts, indeks.ts, aar.ts, media.ts
+│  ├─ src/lager.ts         Blob – tilkoblingsstreng eller Managed Identity
+│  ├─ src/sas.ts           kortlevde lese- og skrive-URL-er
+│  ├─ src/skjema.ts        validering fra felter.json + sanitering
+│  ├─ src/indeksBygger.ts  bygger indeks.json fra årsdokumentene
+│  ├─ src/vakt.ts          krevRolle() – fylles ut i trinn 9
+│  └─ roykprove.mjs        røykprøve mot Azurite
+├─ delt/typer.d.ts                      typer delt mellom app og api
+├─ verktoy/seed.mjs                     eksempeldata
 ├─ staticwebapp.config.json
-├─ swa-cli.config.json                  lokal kjøring med SWA CLI
-└─ .github/workflows/azure-static-web-apps.yml
+└─ swa-cli.config.json
 ```
 
-`delt/typer.ts` gir én definisjon av årsdokumentet som både frontend og API bygger mot —
-en av de største gevinstene ved TypeScript på begge sider.
-
----
+`delt/typer.d.ts` er bevisst en deklarasjonsfil: den inneholder bare typer,
+produserer ingen JavaScript, og kan derfor importeres fra begge prosjekter uten
+monorepo-verktøy eller byggetriks. Legges det runtime-kode der, må oppsettet
+gjøres om.
 
 ## 13. Drift
 

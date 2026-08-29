@@ -1,0 +1,16 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/assets/*", "/api/*", "/*.{css,js,map,png,jpg,jpeg,webp,avif,svg,ico,mp4,webm,woff,woff2}"]
+  },
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Robots-Tag": "noindex, nofollow",
+    "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob: https://*.blob.core.windows.net; media-src 'self' blob: https://*.blob.core.windows.net; connect-src 'self' https://*.blob.core.windows.net; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  },
+  "responseOverrides": {
+    "404": { "rewrite": "/index.html" }
+  },
+  "platform": { "apiRuntime": "node:22" }
+}

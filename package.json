@@ -1,0 +1,23 @@
+{
+  "name": "familiehistorie",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Familiehistorie for familien Christiansen — årssider på Azure Static Web Apps",
+  "scripts": {
+    "installer": "npm install --prefix app && npm install --prefix api",
+    "azurite": "azurite --silent --location .azurite --skipApiVersionCheck",
+    "dev": "swa start",
+    "seed": "node verktoy/seed.mjs",
+    "seed:sky": "node verktoy/seed-sky.mjs",
+    "build": "npm run build --prefix api && npm run build --prefix app",
+    "typecheck": "npm run typecheck --prefix api && npm run typecheck --prefix app",
+    "clean": "rm -rf app/dist api/dist .azurite .swa",
+    "proev": "npm run proev --prefix api"
+  },
+  "devDependencies": {
+    "@azure/static-web-apps-cli": "^2.0.10",
+    "@azure/storage-blob": "^12.33.0",
+    "azurite": "^3.37.0"
+  }
+}
