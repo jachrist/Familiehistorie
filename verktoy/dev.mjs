@@ -8,6 +8,7 @@
  * Derfor: sørg for at Azurite svarer, og start SWA CLI først da.
  */
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { connect } from "node:net";
 
 const AZURITE_PORT = 10000;
@@ -17,10 +18,10 @@ const erWindows = process.platform === "win32";
 const barn = [];
 let stopper = false;
 
-function start(navn, kommando, argumenter) {
+function start(navn, kommando, argumenter, { skall = erWindows } = {}) {
   const p = spawn(kommando, argumenter, {
     stdio: "inherit",
-    shell: erWindows, // npm og npx er .cmd-filer på Windows
+    shell: skall, // npm og npx er .cmd-filer på Windows
     // På POSIX blir barnet gruppeleder, så hele treet kan felles under ett.
     detached: !erWindows,
   });
@@ -92,7 +93,16 @@ if (await svarerPaa(AZURITE_PORT)) {
   console.log(`▸ Azurite svarer allerede på ${AZURITE_PORT}. Bruker den.\n`);
 } else {
   console.log("▸ Starter Azurite …");
-  start("Azurite", "npm", ["run", "azurite"]);
+  // Kjøres direkte med node, ikke via `npm run azurite`. Det fjerner to
+  // mellomledd (cmd.exe og npm), som både gjør oppstarten mer forutsigbar på
+  // Windows og lar oss stoppe prosessen uten å lete etter barnebarn.
+  const azurite = createRequire(import.meta.url).resolve("azurite/dist/src/azurite.js");
+  start(
+    "Azurite",
+    process.execPath,
+    [azurite, "--location", ".azurite", "--skipApiVersionCheck"],
+    { skall: false }
+  );
 
   if (!(await ventPaaPort(AZURITE_PORT, VENTETID_MS))) {
     console.error(`\n✖ Azurite svarte ikke på port ${AZURITE_PORT} innen ${VENTETID_MS / 1000} sekunder.`);
