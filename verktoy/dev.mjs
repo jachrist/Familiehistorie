@@ -3,11 +3,9 @@
  *
  * Azurite må lytte før Functions-verten starter: `func` kobler til lagringen
  * med én gang, og feiler med «Exception has been thrown by the target of an
- * invocation» hvis den ikke er der. Å starte begge samtidig er et kappløp som
- * av og til vinnes og av og til ikke.
+ * invocation» hvis den ikke er der. Å starte begge samtidig er et kappløp.
  *
- * Derfor: start Azurite, vent til porten faktisk svarer, og først da start
- * SWA CLI. Ctrl+C stopper begge.
+ * Derfor: sørg for at Azurite svarer, og start SWA CLI først da.
  */
 import { spawn } from "node:child_process";
 import { connect } from "node:net";
@@ -17,6 +15,7 @@ const VENTETID_MS = 30_000;
 
 const erWindows = process.platform === "win32";
 const barn = [];
+let stopper = false;
 
 function start(navn, kommando, argumenter) {
   const p = spawn(kommando, argumenter, {
@@ -26,7 +25,7 @@ function start(navn, kommando, argumenter) {
     detached: !erWindows,
   });
   p.on("exit", (kode, signal) => {
-    if (signal || kode === 0) return;
+    if (stopper || signal || kode === 0) return;
     console.error(`\n${navn} avsluttet med kode ${kode}.`);
     stoppAlle(kode ?? 1);
   });
@@ -38,7 +37,7 @@ function start(navn, kommando, argumenter) {
  * Feller hele prosesstreet, ikke bare barnet vi startet.
  *
  * `npm run azurite` er et mellomledd: dreper man bare det, blir Azurite
- * liggende og holde porten – og neste `npm run dev` feiler på noe helt annet.
+ * liggende og holde porten – og neste oppstart feiler på noe helt annet.
  */
 function drep(p) {
   if (p.killed || p.exitCode !== null) return;
@@ -53,12 +52,10 @@ function drep(p) {
   }
 }
 
-let stopper = false;
 function stoppAlle(kode) {
   if (stopper) return;
   stopper = true;
   for (const { p } of barn) drep(p);
-  // Gi treet et øyeblikk på å avslutte før prosessen selv går ned.
   setTimeout(() => process.exit(kode), 300);
 }
 
@@ -66,39 +63,53 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => stoppAlle(0));
 }
 
-/** Venter til noe lytter på porten. */
-function ventPaaPort(port, frist) {
-  return new Promise((loes, avvis) => {
-    const start = Date.now();
-    const proev = () => {
-      const sokk = connect({ port, host: "127.0.0.1" });
-      sokk.once("connect", () => {
-        sokk.destroy();
-        loes();
-      });
-      sokk.once("error", () => {
-        sokk.destroy();
-        if (Date.now() - start > frist) {
-          avvis(new Error(`Ingenting svarte på port ${port} innen ${frist / 1000} sekunder.`));
-        } else {
-          setTimeout(proev, 250);
-        }
-      });
+function svarerPaa(port, tidsavbrudd = 800) {
+  return new Promise((loes) => {
+    const s = connect({ port, host: "127.0.0.1" });
+    const ferdig = (svar) => {
+      s.destroy();
+      loes(svar);
     };
-    proev();
+    s.setTimeout(tidsavbrudd);
+    s.once("connect", () => ferdig(true));
+    s.once("timeout", () => ferdig(false));
+    s.once("error", () => ferdig(false));
   });
 }
 
-console.log("▸ Starter Azurite …");
-start("Azurite", "npm", ["run", "azurite"]);
-
-try {
-  await ventPaaPort(AZURITE_PORT, VENTETID_MS);
-  console.log(`▸ Azurite lytter på ${AZURITE_PORT}. Starter Static Web Apps CLI …\n`);
-} catch (e) {
-  console.error(`\n${e.message}`);
-  console.error("Kjører noe annet på porten? Prøv `npm run azurite` alene for å se feilen.");
-  stoppAlle(1);
+async function ventPaaPort(port, frist) {
+  const start = Date.now();
+  while (Date.now() - start < frist) {
+    if (await svarerPaa(port)) return true;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return false;
 }
 
+// Kjører Azurite allerede – fra et annet skall, eller som en rest fra en
+// avsluttet økt – bruker vi den i stedet for å feile på en opptatt port.
+if (await svarerPaa(AZURITE_PORT)) {
+  console.log(`▸ Azurite svarer allerede på ${AZURITE_PORT}. Bruker den.\n`);
+} else {
+  console.log("▸ Starter Azurite …");
+  start("Azurite", "npm", ["run", "azurite"]);
+
+  if (!(await ventPaaPort(AZURITE_PORT, VENTETID_MS))) {
+    console.error(`\n✖ Azurite svarte ikke på port ${AZURITE_PORT} innen ${VENTETID_MS / 1000} sekunder.`);
+    console.error("\nKjør denne for å se hva Azurite selv sier:");
+    console.error("    npx azurite --location .azurite --skipApiVersionCheck");
+    console.error("\nEr porten opptatt av noe annet?");
+    console.error(
+      erWindows
+        ? "    netstat -ano | findstr :10000"
+        : "    lsof -i :10000"
+    );
+    stoppAlle(1);
+    // stoppAlle avslutter etter et kort opphold; ingenting mer skal skje her.
+    await new Promise(() => {});
+  }
+  console.log(`▸ Azurite lytter på ${AZURITE_PORT}.\n`);
+}
+
+console.log("▸ Starter Static Web Apps CLI …\n");
 start("SWA CLI", "npx", ["swa", "start"]);

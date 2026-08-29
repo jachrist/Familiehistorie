@@ -129,7 +129,8 @@ invocation», som ikke sier noe om årsaken. `--verbose` gir resten.
 | `EPERM: operation not permitted, rmdir …\AppData\Roaming\npm\…` | En rest fra en avbrutt global installasjon. Lukk kjørende `func`-prosesser, slett mappa manuelt, og bruk heller winget på Windows |
 | «Could not connect to http://localhost:5173» | Frontenden startet ikke. Se etter feilen rett over i loggen |
 | `Exception has been thrown by the target of an invocation` | Kommer fra `func`, ikke fra SWA CLI. Nesten alltid at Azurite ikke kjører. `npm run dev` starter den nå selv. For den ekte feilmeldingen: `cd api` og `func start` |
-| Azurite svarer ikke | `npm run dev` starter den. Kjører du `dev:kun-swa`, må du starte `npm run azurite` selv |
+| «Azurite svarte ikke på port 10000» | Se hva Azurite selv sier: `npx azurite --location .azurite --skipApiVersionCheck`. Er porten opptatt av noe annet: `netstat -ano \| findstr :10000` på Windows |
+| Azurite svarer ikke | `npm run dev` starter den, og bruker en som allerede kjører hvis den finnes. Kjører du `dev:kun-swa`, må du starte `npm run azurite` selv |
 
 `api/local.settings.json` er gitignorert, siden det er der ekte nøkler havner
 den dagen noen legger inn en. Derfor lages den av `npm run installer` fra

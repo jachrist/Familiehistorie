@@ -6,7 +6,7 @@
   "description": "Familiehistorie for familien Christiansen — årssider på Azure Static Web Apps",
   "scripts": {
     "installer": "npm install --prefix app && npm install --prefix api && npm run forbered",
-    "azurite": "azurite --silent --location .azurite --skipApiVersionCheck",
+    "azurite": "azurite --location .azurite --skipApiVersionCheck",
     "dev": "npm run build --prefix api && node verktoy/dev.mjs",
     "seed": "node verktoy/seed.mjs",
     "seed:sky": "node verktoy/seed-sky.mjs",
