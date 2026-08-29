@@ -98,6 +98,7 @@ uten `api/dist` finner Functions ingenting å kjøre.
 | `npm error code E401 … Unable to authenticate` | Ugyldig tilgangsnøkkel i din egen `.npmrc`. **Ikke** logg inn — offentlige pakker krever ingen konto. Fjern nøkkelen: `npm config delete //registry.npmjs.org/:_authToken` |
 | `EBADENGINE … required: { node: '>=22 <23' }` | Feil Node-versjon. Se forutsetningene over — det må være 22-serien |
 | «Found Azure Functions Core Tools v4 which is incompatible with your current Node.js v24» | Node 24 støttes ikke av Azure Functions. Installer Node 22 |
+| Node 22-installasjonsprogrammet nekter, «a newer version is already installed» | Windows går ikke bakover. Avinstaller først: `winget uninstall --id OpenJS.NodeJS.LTS` i PowerShell som administrator, eller Innstillinger → Apper. Åpne så et **nytt** skall — PATH oppdateres ikke i vinduer som allerede står åpne |
 | `EPERM: operation not permitted, rmdir …\AppData\Roaming\npm\…` | En rest fra en avbrutt global installasjon. Lukk kjørende `func`-prosesser, slett mappa manuelt, og bruk heller winget på Windows |
 | «Could not connect to http://localhost:5173» | Frontenden startet ikke. Se etter feilen rett over i loggen |
 | Azurite svarer ikke | Kjører den i et eget skall? `npm run azurite` |
