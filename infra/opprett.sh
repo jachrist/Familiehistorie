@@ -13,7 +13,9 @@ STED="${STED:-norwayeast}"
 SWA_STED="${SWA_STED:-westeurope}"
 SWA_NAVN="${SWA_NAVN:-${PREFIKS}-web}"
 REPO="${REPO:-https://github.com/jachrist/Familiehistorie}"
-GREN="${GREN:-main}"
+# Grenen Azure kobler GitHub Actions til. Standard er den som er sjekket ut nå,
+# ikke main – ellers peker arbeidsflyten på en gren uten kode.
+GREN="${GREN:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
 
 kilde=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
@@ -33,7 +35,7 @@ LAGERNAVN=$(az deployment group show \
 
 echo "  lagringskonto: $LAGERNAVN"
 
-echo "▸ Static Web App (gratisplanen)"
+echo "▸ Static Web App (gratisplanen), gren $GREN"
 # --source og --token lar Azure generere GitHub Actions-arbeidsflyten selv.
 # Uten GITHUB_TOKEN opprettes appen frakoblet, og du kobler repoet i portalen.
 if [ -n "${GITHUB_TOKEN:-}" ]; then

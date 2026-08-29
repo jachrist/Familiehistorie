@@ -1,7 +1,24 @@
 # Trinn 1 — Azure-ressurser
 
-Kjøres én gang, av deg. Krever [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
-og `az login`.
+Kjøres én gang, av deg.
+
+## Hvor
+
+Fra **rota av repoet**. Du trenger ikke opprette noen mappe — `git clone` lager
+den:
+
+```bash
+git clone https://github.com/jachrist/Familiehistorie.git
+cd Familiehistorie
+git checkout claude/new-project-scope-elqj9d
+```
+
+Har du repoet fra før, holder det med `git pull`.
+
+**Forutsetninger:** [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli),
+Node 22, og `az login` kjørt.
+
+## Kjøring
 
 ```bash
 # Valgfritt: overstyr standardverdiene
@@ -13,6 +30,9 @@ export GITHUB_TOKEN=ghp_…           # valgfritt, se under
 
 ./infra/opprett.sh
 ```
+
+Skriptet finner Bicep-malen selv, så det virker uansett hvor du står — men
+`npm run seed:sky` etterpå må kjøres fra rota.
 
 Skriptet er idempotent — kjøres det på nytt, oppdateres ressursene i stedet for
 å feile.
@@ -42,6 +62,12 @@ Settes den, oppretter Azure GitHub-koblingen og genererer arbeidsflyten under
 `.github/workflows/` i repoet ditt. Tokenet trenger `repo`- og
 `workflow`-tillatelse. Settes den ikke, opprettes Static Web App-en frakoblet,
 og du kobler repoet fra portalen etterpå — resultatet blir det samme.
+
+**Hvilken gren?** Skriptet bruker den du har sjekket ut, og skriver den ut før
+det oppretter appen. Koden ligger foreløpig på
+`claude/new-project-scope-elqj9d`. Vil du utrulle fra `main` i stedet, slå
+grenen sammen først — ellers peker arbeidsflyten på en gren uten kode. Overstyr
+med `export GREN=main` hvis du vet hva du gjør.
 
 ## Om Managed Identity
 

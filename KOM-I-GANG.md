@@ -6,6 +6,17 @@ Status: **fase 1, trinn 1–4** av [faseplanen](docs/omfang-og-arkitektur.md#14-
 > inn før den er på plass, er lesbart for enhver som finner adressen. Ikke last
 > opp ekte familiebilder ennå.
 
+## Hent koden
+
+Du trenger ikke opprette noen mappe — `git clone` lager den. Alle kommandoer
+under kjøres fra **rota av repoet**.
+
+```bash
+git clone https://github.com/jachrist/Familiehistorie.git
+cd Familiehistorie
+git checkout claude/new-project-scope-elqj9d
+```
+
 ## Lokalt
 
 Krever Node 22 og [Azure Functions Core Tools v4](https://learn.microsoft.com/azure/azure-functions/functions-run-local).
