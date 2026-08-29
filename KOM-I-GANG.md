@@ -12,10 +12,12 @@ Du trenger ikke opprette noen mappe — `git clone` lager den. Alle kommandoer
 under kjøres fra **rota av repoet**.
 
 ```bash
-git clone https://github.com/jachrist/Familiehistorie.git
+git clone -b claude/new-project-scope-elqj9d https://github.com/jachrist/Familiehistorie.git
 cd Familiehistorie
-git checkout claude/new-project-scope-elqj9d
 ```
+
+`-b` kloner og sjekker ut grenen i ett steg. Bekreft med
+`git branch --show-current`.
 
 ## Lokalt
 

@@ -8,9 +8,8 @@ Fra **rota av repoet**. Du trenger ikke opprette noen mappe — `git clone` lage
 den:
 
 ```bash
-git clone https://github.com/jachrist/Familiehistorie.git
+git clone -b claude/new-project-scope-elqj9d https://github.com/jachrist/Familiehistorie.git
 cd Familiehistorie
-git checkout claude/new-project-scope-elqj9d
 ```
 
 Har du repoet fra før, holder det med `git pull`.
