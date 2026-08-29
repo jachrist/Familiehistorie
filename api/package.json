@@ -24,5 +24,8 @@
     "@types/node": "^26.4.0",
     "@types/sanitize-html": "^2.16.0",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

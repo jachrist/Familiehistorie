@@ -19,16 +19,38 @@ git checkout claude/new-project-scope-elqj9d
 
 ## Lokalt
 
-Krever **Node 22** og **Azure Functions Core Tools v4**. Uten den siste prøver
-SWA CLI å laste den ned selv, noe som ofte feiler bak brannmur — installer den
-på forhånd:
+### Forutsetninger
+
+**Node 22.** Sjekk med `node --version`. Node 20 gikk ut av vedlikehold
+30. april 2026, og Functions Core Tools v4 krever 22 eller nyere. Hent Node 22
+fra [nodejs.org](https://nodejs.org/) eller `winget install OpenJS.NodeJS.LTS`.
+
+**Azure Functions Core Tools v4.** Uten den prøver SWA CLI å laste den ned selv,
+noe som ofte feiler bak brannmur.
+
+På Windows er winget den enkleste veien — den henter et ferdig installasjonsprogram
+og går utenom npm:
+
+```powershell
+winget install Microsoft.Azure.FunctionsCoreTools
+```
+
+På macOS og Linux:
 
 ```bash
 npm i -g azure-functions-core-tools@4 --unsafe-perm true
-func --version        # skal vise 4.x
 ```
 
-Så, fra rota av repoet:
+Sjekk med `func --version` — den skal vise 4.x.
+
+> Å installere en offentlig npm-pakke krever **aldri** innlogging. Får du
+> `npm error code E401 … please try logging in`, er det en ugyldig
+> tilgangsnøkkel i din egen `.npmrc`, ikke en manglende konto. Se
+> feilsøkingstabellen under.
+
+### Oppsett
+
+Fra rota av repoet:
 
 ```bash
 npm install          # verktøy i rotmappa
@@ -51,10 +73,13 @@ uten `api/dist` finner Functions ingenting å kjøre.
 
 ### Hvis noe klikker
 
-| Symptom | Årsak |
+| Symptom | Årsak og fiks |
 |---|---|
 | `func` spør hvilket språk prosjektet er i (dotnet / Node / Python …) | `api/local.settings.json` mangler eller er tom. Kjør `npm run forbered` |
-| «Could not find or install Azure Functions Core Tools» | Installer den globalt, se over |
+| «Could not find or install Azure Functions Core Tools» | Ikke installert. Se forutsetningene over |
+| `npm error code E401 … Unable to authenticate` | Ugyldig tilgangsnøkkel i din egen `.npmrc`. **Ikke** logg inn — offentlige pakker krever ingen konto. Fjern nøkkelen: `npm config delete //registry.npmjs.org/:_authToken` |
+| `EBADENGINE … required: { node: '>=22' }` | Du kjører Node 20 eller eldre. Oppgrader til Node 22 |
+| `EPERM: operation not permitted, rmdir …\AppData\Roaming\npm\…` | En rest fra en avbrutt global installasjon. Lukk kjørende `func`-prosesser, slett mappa manuelt, og bruk heller winget på Windows |
 | «Could not connect to http://localhost:5173» | Frontenden startet ikke. Se etter feilen rett over i loggen |
 | Azurite svarer ikke | Kjører den i et eget skall? `npm run azurite` |
 

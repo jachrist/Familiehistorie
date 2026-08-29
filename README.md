@@ -13,6 +13,9 @@ Jeg ønsker å benytte min vanlige arkitektur - Azure Static Web app for sider, 
 **Fase 1, trinn 1–4 er bygget.** Oppsett, kommandoer og hva som virker:
 [KOM-I-GANG.md](KOM-I-GANG.md).
 
+Krever **Node 22** og **Azure Functions Core Tools v4**
+(`winget install Microsoft.Azure.FunctionsCoreTools` på Windows).
+
 ```bash
 npm install && npm run installer
 npm run azurite     # eget skall
