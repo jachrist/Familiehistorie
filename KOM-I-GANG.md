@@ -21,9 +21,26 @@ git checkout claude/new-project-scope-elqj9d
 
 ### Forutsetninger
 
-**Node 22.** Sjekk med `node --version`. Node 20 gikk ut av vedlikehold
-30. april 2026, og Functions Core Tools v4 krever 22 eller nyere. Hent Node 22
-fra [nodejs.org](https://nodejs.org/) eller `winget install OpenJS.NodeJS.LTS`.
+**Node 22 — nøyaktig 22, ikke nyere.** Sjekk med `node --version`.
+
+Vinduet er smalt i begge ender: Functions Core Tools v4 krever Node 22 eller
+nyere, mens Azure Functions ikke støtter Node 24. Node 20 gikk dessuten ut av
+vedlikehold 30. april 2026. Node 22 er det eneste som treffer.
+
+Ikke bruk «siste LTS» — den merkelappen peker på Node 24 nå. Hent 22-serien
+direkte fra [nodejs.org/dist/latest-v22.x](https://nodejs.org/dist/latest-v22.x/)
+(`node-v22.x.y-x64.msi` på Windows).
+
+Trenger du flere Node-versjoner side om side, er
+[nvm-windows](https://github.com/coreybutler/nvm-windows) enkleste vei:
+
+```powershell
+nvm install 22
+nvm use 22
+```
+
+`engines` i `package.json` er satt til `>=22 <23`, så npm advarer hvis du står
+på feil versjon.
 
 **Azure Functions Core Tools v4.** Uten den prøver SWA CLI å laste den ned selv,
 noe som ofte feiler bak brannmur.
@@ -79,7 +96,8 @@ uten `api/dist` finner Functions ingenting å kjøre.
 | `func` spør hvilket språk prosjektet er i (dotnet / Node / Python …) | `api/local.settings.json` mangler eller er tom. Kjør `npm run forbered` |
 | «Could not find or install Azure Functions Core Tools» | Ikke installert. Se forutsetningene over |
 | `npm error code E401 … Unable to authenticate` | Ugyldig tilgangsnøkkel i din egen `.npmrc`. **Ikke** logg inn — offentlige pakker krever ingen konto. Fjern nøkkelen: `npm config delete //registry.npmjs.org/:_authToken` |
-| `EBADENGINE … required: { node: '>=22' }` | Du kjører Node 20 eller eldre. Oppgrader til Node 22 |
+| `EBADENGINE … required: { node: '>=22 <23' }` | Feil Node-versjon. Se forutsetningene over — det må være 22-serien |
+| «Found Azure Functions Core Tools v4 which is incompatible with your current Node.js v24» | Node 24 støttes ikke av Azure Functions. Installer Node 22 |
 | `EPERM: operation not permitted, rmdir …\AppData\Roaming\npm\…` | En rest fra en avbrutt global installasjon. Lukk kjørende `func`-prosesser, slett mappa manuelt, og bruk heller winget på Windows |
 | «Could not connect to http://localhost:5173» | Frontenden startet ikke. Se etter feilen rett over i loggen |
 | Azurite svarer ikke | Kjører den i et eget skall? `npm run azurite` |
