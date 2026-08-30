@@ -71,6 +71,25 @@ Host pi
 
 > **Ta vare på den private nøkkelen.** Den ligger bare på maskinen din. En
 > reinstallasjon av Windows tar den med seg, og da kommer du ikke inn.
+
+**Har du allerede `~\.ssh\id_ed25519`?** Ikke skriv over den. `ssh-keygen`
+overskriver uten mulighet for angring, og er nøkkelen lagt inn på GitHub eller
+en annen server, mister du tilgangen der. Én nøkkel kan brukes mot så mange
+maskiner du vil — sjekk at den er hel og gjenbruk den:
+
+```powershell
+Get-ChildItem ~\.ssh                        # begge filene skal ligge her
+ssh-keygen -l -f ~\.ssh\id_ed25519.pub      # skriver ut fingeravtrykk hvis paret er gyldig
+Get-Content ~\.ssh\id_ed25519.pub | Set-Clipboard
+```
+
+Vil du likevel ha en egen nøkkel til Pi'en, gi den et eget navn i stedet for å
+røre den gamle, og pek på den fra `Host pi`-blokka med
+`IdentityFile ~/.ssh/id_pi`:
+
+```powershell
+ssh-keygen -t ed25519 -f ~\.ssh\id_pi -C "jan@pi-apper"
+```
 > Legg den i passordbehandleren. På Pi-en redder fysisk tilgang deg —
 > på VPS-en gjør den ikke det.
 
