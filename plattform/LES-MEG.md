@@ -244,10 +244,35 @@ sudo ufw allow 80,443/tcp
 sudo ufw --force enable
 
 # Slå av passordinnlogging. Bekreft at nøkkelen din virker FØR du kjører dette.
-sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo tee /etc/ssh/sshd_config.d/99-hardening.conf >/dev/null <<'EOF'
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+EOF
+sudo sshd -t && sudo systemctl restart ssh
+```
+
+Legg merke til at innstillingene skrives til `sshd_config.d/`, ikke til
+`sshd_config` selv. Ubuntu leser inn `sshd_config.d/*.conf` **først**, og i
+OpenSSH vinner den verdien som settes først. Satte du passord i Imager, har
+cloud-init lagt igjen `50-cloud-init.conf` med `PasswordAuthentication yes` —
+og da har en endring i hovedfila ingen virkning i det hele tatt. Filnavnet
+`99-` sorterer etter, men `Include`-linja står på toppen av `sshd_config`, så
+det er filene i katalogen som gjelder. Er du i tvil, slett cloud-init-fila:
+
+```bash
+sudo rm -f /etc/ssh/sshd_config.d/50-cloud-init.conf
 sudo systemctl restart ssh
 ```
+
+Kontroller alltid resultatet mot den *virksomme* konfigurasjonen, ikke mot
+fila du skrev:
+
+```bash
+sudo sshd -T | grep -E 'passwordauthentication|permitrootlogin'
+```
+
+Svaret skal være `passwordauthentication no` og `permitrootlogin no`.
 
 > På Pi-en kan du koble til tastatur hvis noe går galt. På VPS-en er samme
 > feil en støttehenvendelse. Bruk anledningen til å gjøre feilene her.
