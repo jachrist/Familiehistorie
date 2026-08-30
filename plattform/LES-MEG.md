@@ -26,6 +26,53 @@ Sett bootrekkefølgen så den starter fra SSD-en:
 sudo raspi-config     # Advanced Options → Boot Order → NVMe/USB
 ```
 
+### Den store disken
+
+`/srv` er der appdata og containervolumer havner. Slik monterer du disken der.
+Finn den først — sjekk nøye at du ser på riktig enhet før du partisjonerer,
+`sdb` i dag kan være `sda` i morgen:
+
+```bash
+lsblk -o NAME,SIZE,MODEL,MOUNTPOINT
+```
+
+Partisjoner, formater og monter (bytt `sda` mot din enhet — dette **sletter**
+alt på disken):
+
+```bash
+sudo parted /dev/sda --script mklabel gpt mkpart primary ext4 0% 100%
+sudo mkfs.ext4 -L data /dev/sda1
+sudo mkdir -p /srv
+sudo mount /dev/sda1 /srv
+sudo chown "$USER:$USER" /srv
+```
+
+Gjør den permanent. Bruk **UUID**, aldri `/dev/sda1` — enhetsnavn bytter plass
+mellom oppstarter, og en Pi som monterer feil disk er verre enn en som ikke
+monterer noe:
+
+```bash
+sudo blkid /dev/sda1        # noter UUID
+echo 'UUID=<uuid>  /srv  ext4  defaults,noatime,nofail,x-systemd.device-timeout=10  0  2' \
+  | sudo tee -a /etc/fstab
+sudo systemctl daemon-reload
+sudo mount -a && df -h /srv
+```
+
+`nofail` er ikke pynt: uten den blir en Pi som ikke finner disken stående i
+nødmodus ved oppstart — uten skjerm og uten SSH.
+
+Docker legger som standard bilder og volumer på systemdisken. Flytt dem hit
+*før* du bygger noe, mens katalogen er tom:
+
+```bash
+sudo systemctl stop docker
+sudo mkdir -p /srv/docker
+echo '{ "data-root": "/srv/docker" }' | sudo tee /etc/docker/daemon.json
+sudo systemctl start docker
+docker info | grep 'Docker Root Dir'
+```
+
 ### Operativsystem
 
 **Ubuntu Server 24.04 LTS (64-bit)**, ikke Raspberry Pi OS. Grunnen er at
