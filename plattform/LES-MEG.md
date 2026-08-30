@@ -147,6 +147,32 @@ Test-NetConnection 192.168.68.118 -Port 22
 
 `TcpTestSucceeded : False` med `PingSucceeded : True` er nøyaktig bildet over.
 
+### «REMOTE HOST IDENTIFICATION HAS CHANGED»
+
+Denne handler om **tjenerens** nøkkel, ikke din egen — til tross for
+formuleringen. Hver SSH-tjener har sin egen vertsnøkkel, og `known_hosts`
+husker hvilken nøkkel som hørte til hvilken IP-adresse. Får en nyinstallert
+maskin en IP-adresse som tidligere tilhørte en annen, ser `ssh` en ny nøkkel på
+en kjent adresse og nekter. På et hjemmenett med DHCP er det dagligdags, og har
+ingenting med et angrep å gjøre.
+
+Slett den utdaterte linja og koble til på nytt:
+
+```powershell
+ssh-keygen -R 192.168.68.117
+ssh jan@192.168.68.117          # svar «yes» på fingeravtrykket
+```
+
+Vil du være helt sikker på at du snakker med Pi-en, les fingeravtrykket fra
+konsollen på Pi-en før du svarer ja:
+
+```bash
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+Merk også at meldingen er et *godt* tegn: den beviser at en SSH-tjener svarer
+på adressen. Da er du forbi «Connection refused» og bare et fingeravtrykk unna.
+
 ### Grunnsikring
 
 ```bash
