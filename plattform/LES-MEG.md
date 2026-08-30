@@ -96,6 +96,42 @@ ssh-keygen -t ed25519 -f ~\.ssh\id_pi -C "jan@pi-apper"
 Gi den fast adresse i ruteren (DHCP-reservasjon er enklere enn statisk
 oppsett på maskinen).
 
+### Kommer ikke inn med SSH
+
+`Connection refused` betyr noe helt annet enn `Permission denied`. Refused =
+maskinen svarte og sa at *ingenting lytter på port 22*. Feil brukernavn eller
+feil nøkkel gir aldri refused. Sjekk i denne rekkefølgen:
+
+1. **Vent.** Første oppstart av Ubuntu kjører cloud-init, som setter opp bruker
+   og nøkler og starter om én gang. Det tar noen minutter, og i mellomtiden er
+   port 22 stengt selv om maskinen svarer på ping.
+2. **Er det virkelig Pi-en?** Ping beviser bare at *noe* har den adressen. En
+   skriver eller en TV som har fått IP-en fra DHCP svarer like fint.
+   `arp -a 192.168.68.118` viser MAC-adressen; Raspberry Pi begynner på
+   `2c:cf:67`, `d8:3a:dd`, `e4:5f:01` eller `b8:27:eb`. Ellers: klientlista i
+   ruteren.
+3. **Bruk riktig bruker.** `root` er avslått. Bruk brukeren du satte i Imager,
+   eller `ubuntu` hvis du ikke satte noen. Prøv gjerne vertsnavnet:
+   `ssh jan@pi-apper.local`.
+4. **Ble tilpasningen i Imager faktisk skrevet?** Imager spør «Bruk
+   OS-tilpasning?» rett før skriving, og et feilklikk der gir et image helt
+   uten SSH-nøkkel. Sett mediet i PC-en og se etter `user-data` på
+   `system-boot`-partisjonen — brukernavnet og nøkkelen din skal stå der.
+5. **Skjerm og tastatur.** Det raskeste når resten ikke gir svar:
+
+   ```bash
+   sudo systemctl enable --now ssh
+   ip addr             # bekreft adressen mens du er der
+   ```
+
+Test porten uten å blande inn nøkler:
+
+```powershell
+Test-NetConnection 192.168.68.118 -Port 22
+```
+
+`TcpTestSucceeded : False` med `PingSucceeded : True` er nøyaktig bildet over.
+
 ### Grunnsikring
 
 ```bash
