@@ -173,6 +173,43 @@ ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
 Merk også at meldingen er et *godt* tegn: den beviser at en SSH-tjener svarer
 på adressen. Da er du forbi «Connection refused» og bare et fingeravtrykk unna.
 
+### Får passordspørsmål i stedet for nøkkelinnlogging
+
+To ting er galt samtidig når dette skjer: nøkkelen ble ikke godtatt, *og*
+tjeneren tillater fortsatt passord. Nesten alltid betyr det at
+OS-tilpasningen fra Imager ikke ble skrevet — da finnes verken brukeren din
+eller nøkkelen din på maskinen.
+
+Merk at `Permission denied` på passord ikke betyr at passordet var feil.
+Finnes ikke brukeren, spør SSH om passord likevel og avviser alt du taster —
+den røper aldri om det var brukernavnet eller passordet som var ukjent.
+
+Start med å se hva som faktisk skjer:
+
+```powershell
+ssh -v jan@192.168.68.121
+```
+
+Linja `Authentications that can continue: publickey,password` etterfulgt av
+`Offering public key` og så passordspørsmål betyr at tjeneren så nøkkelen din
+og ikke kjente den igjen. Står det aldri `Offering public key`, er det klienten
+din som ikke fant nøkkelen — pek på den direkte med `-i ~\.ssh\id_ed25519`.
+
+Prøv standardbrukeren før du gjør noe mer: Ubuntu-imaget har `ubuntu` (passord
+`ubuntu`, må byttes ved første innlogging), Raspberry Pi OS har `pi`.
+
+```powershell
+ssh ubuntu@192.168.68.121
+```
+
+Virker den, er saken klar: tilpasningen ble aldri brukt.
+
+**Uten skjerm:** ta bootmediet ut av Pi-en og sett det i PC-en.
+`system-boot`-partisjonen er FAT32 og leses fint av Windows. Åpne `user-data`
+og se etter brukernavnet ditt og `ssh_authorized_keys`. Mangler de, er
+raskeste vei å skrive mediet på nytt med Imager — og denne gangen bekrefte
+dialogen «Bruk OS-tilpasning?» før skrivingen starter.
+
 ### Grunnsikring
 
 ```bash
