@@ -1,0 +1,52 @@
+# Caddy: én blokk per app. Ny app senere er fire linjer og «caddy reload».
+#
+# TLS håndteres automatisk. Hvilken variant som gjelder avhenger av om
+# tjeneren er nåbar fra internett:
+#
+#   · Nåbar utenfra  → Caddy henter Let's Encrypt-sertifikat selv. Ingen
+#                      ekstra linje trengs; bare fjern «tls internal».
+#   · Bare på LAN    → «tls internal» gir et sertifikat fra Caddys egen
+#                      rot. Nettleseren advarer første gang, men hele
+#                      reverse proxy-oppsettet testes likevel.
+#
+# Forskjellen mellom test på Pi og drift på VPS er altså én linje.
+
+{
+	# Bytt til din egen adresse. Let's Encrypt varsler hit om noe skurrer.
+	email din@epost.no
+}
+
+proev.dittdomene.no {
+	tls internal
+
+	# Helsesjekken skal ikke ligge i tilgangsloggen; den kjører hvert halve minutt.
+	@helse path /helse
+	log {
+		output file /var/log/caddy/proev-app.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+	log_skip @helse
+
+	encode zstd gzip
+
+	header {
+		# Grunnleggende herding. Content-Security-Policy hører hjemme i appen,
+		# som vet hva den faktisk laster.
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	reverse_proxy 127.0.0.1:3001 {
+		health_uri /helse
+		health_interval 30s
+	}
+}
+
+# Malen for neste app. Kopier, bytt navn og port.
+#
+# familie.dittdomene.no {
+# 	reverse_proxy 127.0.0.1:3002
+# }

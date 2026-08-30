@@ -1,0 +1,31 @@
+# Én stack per app. Denne filen kopieres og tilpasses for hver ny app.
+#
+# Merk to ting:
+#   · porten bindes til 127.0.0.1, ikke 0.0.0.0. Appen er utilgjengelig
+#     utenfra; bare Caddy på samme maskin når den. Det gjør at en
+#     brannmurfeil ikke eksponerer noe.
+#   · data ligger i en navngitt katalog på verten, ikke i et Docker-volum.
+#     Da vet sikkerhetskopien nøyaktig hvor den skal se.
+
+services:
+  proev-app:
+    build:
+      context: ./proev-app
+      args:
+        VERSJON: ${VERSJON:-lokal}
+        BYGGET: ${BYGGET:-ukjent}
+    image: proev-app:${VERSJON:-lokal}
+    container_name: proev-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:8080"
+    volumes:
+      - /srv/proev-app/data:/data
+    environment:
+      TZ: Europe/Oslo
+    logging:
+      # Uten dette fyller loggene disken over tid. På en Pi merkes det.
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,11 @@
+[Unit]
+Description=Sikkerhetskopi av /srv med restic
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/srv/plattform/sikkerhetskopi/kopier.sh
+# Kopien skal ikke ta maskinen ned mens den går.
+Nice=10
+IOSchedulingClass=idle

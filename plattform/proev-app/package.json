@@ -1,0 +1,13 @@
+{
+  "name": "proev-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Prøveapp for plattformoppsettet — beviser at infrastrukturen henger sammen",
+  "main": "src/tjener.mjs",
+  "scripts": {
+    "start": "node src/tjener.mjs",
+    "dev": "DATAKATALOG=./data PORT=8080 node --watch src/tjener.mjs"
+  },
+  "engines": { "node": ">=22" }
+}

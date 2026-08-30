@@ -39,6 +39,16 @@ Trinn 9–11 gjenstår. `npm run proev` kjører en røykprøve av API-et mot Azu
 
 > **Ingen innlogging før trinn 9.** Ikke last opp ekte familiebilder ennå.
 
+### Plattformoppsett
+`plattform/` inneholder en oppskrift for å kjøre appene på egen server —
+først en Raspberry Pi som prøvebenk, senere en VPS. Samme oppsett begge steder:
+Caddy som reverse proxy, én Docker Compose-stack per app, `restic` mot
+Backblaze B2, og et deploy-skript som venter på at helsesjekken svarer før det
+sier seg ferdig.
+
+Prøveappen der er poengløs med vilje — den beviser at infrastrukturen henger
+sammen før en ekte app flyttes inn. Se [plattform/LES-MEG.md](plattform/LES-MEG.md).
+
 ### Omfang og implementering
 Et gjennomarbeidet forslag til avgrensing, informasjonsmodell, arkitektur og faseplan
 ligger i **[docs/omfang-og-arkitektur.md](docs/omfang-og-arkitektur.md)**.
