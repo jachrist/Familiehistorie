@@ -40,6 +40,40 @@ Bruk Raspberry Pi Imager og åpne **innstillinger før du skriver**:
 
 Da trenger du aldri koble til tastatur og skjerm.
 
+#### SSH-nøkkel
+
+Har du ingen fra før, i PowerShell på Windows (OpenSSH er innebygd):
+
+```powershell
+ssh-keygen -t ed25519 -C "jan@pi-apper"          # Enter for standard sti, sett en passphrase
+Get-Content ~\.ssh\id_ed25519.pub | Set-Clipboard
+```
+
+Den offentlige nøkkelen ligger nå på utklippstavla og limes inn i Imager.
+Filen uten `.pub` er den private — den deles aldri.
+
+Slipp å skrive passphrase hver gang (de to første linjene som administrator):
+
+```powershell
+Get-Service ssh-agent | Set-Service -StartupType Automatic
+Start-Service ssh-agent
+ssh-add ~\.ssh\id_ed25519
+```
+
+Et kortnavn i `~\.ssh\config` gjør `ssh pi` til alt du trenger:
+
+```
+Host pi
+    HostName 192.168.1.50
+    User jan
+    IdentityFile ~/.ssh/id_ed25519
+```
+
+> **Ta vare på den private nøkkelen.** Den ligger bare på maskinen din. En
+> reinstallasjon av Windows tar den med seg, og da kommer du ikke inn.
+> Legg den i passordbehandleren. På Pi-en redder fysisk tilgang deg —
+> på VPS-en gjør den ikke det.
+
 Gi den fast adresse i ruteren (DHCP-reservasjon er enklere enn statisk
 oppsett på maskinen).
 
