@@ -107,12 +107,27 @@ feil nøkkel gir aldri refused. Sjekk i denne rekkefølgen:
    port 22 stengt selv om maskinen svarer på ping.
 2. **Er det virkelig Pi-en?** Ping beviser bare at *noe* har den adressen. En
    skriver eller en TV som har fått IP-en fra DHCP svarer like fint.
-   `arp -a 192.168.68.118` viser MAC-adressen; Raspberry Pi begynner på
-   `2c:cf:67`, `d8:3a:dd`, `e4:5f:01` eller `b8:27:eb`. Ellers: klientlista i
-   ruteren.
+   `arp -a <adresse>` viser MAC-adressen; Raspberry Pi begynner på `2c:cf:67`,
+   `d8:3a:dd`, `e4:5f:01`, `28:cd:c1`, `dc:a6:32` eller `b8:27:eb`. Står det
+   noe annet, leter du på feil maskin. Slik finner du den rette — pinger hele
+   nettet for å fylle ARP-tabellen, og siler ut Pi-adressene (PowerShell):
+
+   ```powershell
+   1..254 | ForEach-Object {
+       (New-Object System.Net.NetworkInformation.Ping).SendPingAsync("192.168.68.$_", 300)
+   } | Out-Null
+   Start-Sleep -Seconds 5
+   arp -a | Select-String '2c-cf-67|d8-3a-dd|e4-5f-01|28-cd-c1|dc-a6-32|b8-27-eb'
+   ```
+
+   Tomt svar betyr at Pi-en ikke er på nettet i det hele tatt — da er det
+   oppstart eller wifi-oppsettet som er feil, ikke SSH. Klientlista i ruteren
+   er fasit hvis du vil ha vertsnavn også.
 3. **Bruk riktig bruker.** `root` er avslått. Bruk brukeren du satte i Imager,
-   eller `ubuntu` hvis du ikke satte noen. Prøv gjerne vertsnavnet:
-   `ssh jan@pi-apper.local`.
+   eller `ubuntu` hvis du ikke satte noen. Vertsnavnet — `ssh
+   jan@pi-apper.local` — virker bare hvis mDNS finnes: Raspberry Pi OS har det
+   installert, Ubuntu Server har det ikke før du kjører
+   `sudo apt install avahi-daemon`.
 4. **Ble tilpasningen i Imager faktisk skrevet?** Imager spør «Bruk
    OS-tilpasning?» rett før skriving, og et feilklikk der gir et image helt
    uten SSH-nøkkel. Sett mediet i PC-en og se etter `user-data` på
