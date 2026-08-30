@@ -29,6 +29,10 @@ function start(navn, kommando, argumenter, valg = {}) {
   p.on("exit", (kode, signal) => {
     if (stopper || signal || kode === 0) return;
     console.error(`\n${navn} avsluttet med kode ${kode}.`);
+    if (navn === "Azurite") {
+      console.error("\nBle den avbrutt forrige gang, kan metadatafilen være skadet.");
+      console.error("Kjør `npm run clean` og prøv igjen.\n");
+    }
     stoppAlle(kode ?? 1);
   });
   barn.push({ navn, p });
@@ -37,8 +41,16 @@ function start(navn, kommando, argumenter, valg = {}) {
 
 function drep(p) {
   if (p.killed || p.exitCode !== null) return;
-  if (erWindows) spawn("taskkill", ["/pid", String(p.pid), "/T", "/F"], { stdio: "ignore" });
-  else {
+  if (erWindows) {
+    // Først uten /F, så Azurite rekker å skrive ferdig metadatafilen sin.
+    // Tvungen avslutning midt i en skriving etterlater den som ugyldig JSON.
+    spawn("taskkill", ["/pid", String(p.pid), "/T"], { stdio: "ignore" });
+    setTimeout(() => {
+      if (p.exitCode === null) {
+        spawn("taskkill", ["/pid", String(p.pid), "/T", "/F"], { stdio: "ignore" });
+      }
+    }, 1500);
+  } else {
     try {
       process.kill(-p.pid, "SIGTERM");
     } catch {

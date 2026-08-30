@@ -28,6 +28,11 @@ function start(navn, kommando, argumenter, { skall = erWindows } = {}) {
   p.on("exit", (kode, signal) => {
     if (stopper || signal || kode === 0) return;
     console.error(`\n${navn} avsluttet med kode ${kode}.`);
+    if (navn === "Azurite") {
+      console.error("\nBle den avbrutt forrige gang, kan metadatafilen være skadet.");
+      console.error("Kjør `npm run clean` og prøv igjen — det sletter bare lokal");
+      console.error("emulatorlagring, ikke noe i Azure.\n");
+    }
     stoppAlle(kode ?? 1);
   });
   barn.push({ navn, p });
@@ -43,7 +48,15 @@ function start(navn, kommando, argumenter, { skall = erWindows } = {}) {
 function drep(p) {
   if (p.killed || p.exitCode !== null) return;
   if (erWindows) {
-    spawn("taskkill", ["/pid", String(p.pid), "/T", "/F"], { stdio: "ignore" });
+    // Først uten /F, så Azurite rekker å skrive ferdig metadatafilen sin.
+    // Tvungen avslutning midt i en skriving etterlater den som ugyldig JSON,
+    // og neste oppstart feiler med «Unexpected token … is not valid JSON».
+    spawn("taskkill", ["/pid", String(p.pid), "/T"], { stdio: "ignore" });
+    setTimeout(() => {
+      if (p.exitCode === null) {
+        spawn("taskkill", ["/pid", String(p.pid), "/T", "/F"], { stdio: "ignore" });
+      }
+    }, 1500);
   } else {
     try {
       process.kill(-p.pid, "SIGTERM");
@@ -57,7 +70,7 @@ function stoppAlle(kode) {
   if (stopper) return;
   stopper = true;
   for (const { p } of barn) drep(p);
-  setTimeout(() => process.exit(kode), 300);
+  setTimeout(() => process.exit(kode), 2000);
 }
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
