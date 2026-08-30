@@ -35,10 +35,29 @@ hver kommando du lærer her direkte overførbar.
 Bruk Raspberry Pi Imager og åpne **innstillinger før du skriver**:
 
 - vertsnavn, f.eks. `pi-apper`
-- SSH på, med **offentlig nøkkel** — ikke passord
-- brukernavn, tidssone, tastatur
+- brukernavn og **passord**
+- SSH på, med **passordinnlogging**
+- tidssone, tastatur
 
 Da trenger du aldri koble til tastatur og skjerm.
+
+**Start med passord, ikke nøkkel.** Det er fristende å legge inn den
+offentlige nøkkelen med én gang og hoppe over passordsteget, men da har du
+ingen vei inn hvis nøkkelen ikke kom fram — og uten skjerm ingen måte å finne
+ut hvorfor. Med passord kommer du alltid inn, og nøkkelen legger du på
+etterpå med én kommando. Passordinnlogging slås av igjen under
+[Grunnsikring](#grunnsikring), som er der den hører hjemme uansett.
+
+Når du er inne første gang, kopier nøkkelen over fra Windows (`ssh-copy-id`
+finnes ikke der, men røret gjør samme jobb):
+
+```powershell
+type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh jan@192.168.68.121 `
+  "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+```
+
+Logg ut, og logg inn på nytt. Kommer du inn **uten** å bli spurt om passord,
+virker nøkkelen — og først da er det trygt å slå av passordinnlogging.
 
 #### SSH-nøkkel
 
@@ -224,7 +243,7 @@ sudo ufw allow OpenSSH
 sudo ufw allow 80,443/tcp
 sudo ufw --force enable
 
-# Slå av passordinnlogging
+# Slå av passordinnlogging. Bekreft at nøkkelen din virker FØR du kjører dette.
 sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sudo systemctl restart ssh
