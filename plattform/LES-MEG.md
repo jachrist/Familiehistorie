@@ -26,6 +26,68 @@ Sett bootrekkefølgen så den starter fra SSD-en:
 sudo raspi-config     # Advanced Options → Boot Order → NVMe/USB
 ```
 
+### Fast IP-adresse
+
+Pi-en må ha en adresse som ikke flytter seg. Ellers må `~/.ssh/config`,
+DNS-oppføringene og alt annet som peker på den rettes hver gang DHCP-leien
+fornyes.
+
+**Gjør det i ruteren, ikke på Pi-en.** En DHCP-reservasjon binder adressen til
+MAC-adressen, og Pi-en fortsetter å spørre om adresse som før — den kan ikke
+konfigureres feil på en måte som stenger deg ute. På et hjemmenett med skjult
+maskin uten skjerm er det argumentet tungt nok alene. Finn MAC-adressen:
+
+```bash
+ip -brief link show | grep -v LOOPBACK
+```
+
+Legg den inn under DHCP-reservasjoner i ruteren, velg en adresse, og start
+Pi-en på nytt.
+
+Vil du likevel sette den på maskinen, bruk `netplan try` — den ruller tilbake
+av seg selv etter to minutter hvis du mister forbindelsen:
+
+```bash
+ip route get 1.1.1.1        # viser grensesnittnavn og gateway
+
+sudo tee /etc/netplan/99-statisk.yaml >/dev/null <<'EOF'
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: false
+      addresses: [192.168.68.50/24]
+      routes:
+        - to: default
+          via: 192.168.68.1
+      nameservers:
+        addresses: [192.168.68.1, 1.1.1.1]
+EOF
+sudo chmod 600 /etc/netplan/99-statisk.yaml
+sudo netplan try
+```
+
+Er Pi-en på wifi, heter blokka `wifis:` og trenger `access-points:` med
+SSID-en — da er reservasjon i ruteren enda mer verdt. Velg uansett en adresse
+**utenfor** ruterens DHCP-område, ellers deler to enheter adresse en dag.
+
+Hindre at cloud-init skriver over nettverksoppsettet ved oppstart:
+
+```bash
+echo 'network: {config: disabled}' \
+  | sudo tee /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+```
+
+**Uansett metode:** installer mDNS, så finner du maskinen på navn den dagen
+adressen likevel er feil.
+
+```bash
+sudo apt install -y avahi-daemon
+```
+
+Da svarer den på `pi-apper.local`, og `~/.ssh/config` kan peke på navnet i
+stedet for en adresse som kan endre seg.
+
 ### Den store disken
 
 `/srv` er der appdata og containervolumer havner. Slik monterer du disken der.
