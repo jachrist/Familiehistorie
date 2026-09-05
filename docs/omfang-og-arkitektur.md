@@ -854,6 +854,29 @@ fase 1 dekker behovet.
 
 ---
 
+## 15b. Driftsplattform — avgjort
+
+Valget mellom Azure og en egen Ubuntu-server ble vurdert i sin helhet i
+september 2026, etter at en Raspberry Pi 5 var satt opp som prøvebenk
+(oppskriften ligger i `plattform/`). **Azure er valgt.** Begrunnelsen, kort:
+
+| | Azure (valgt) | Ubuntu-VPS |
+|---|---|---|
+| Portering av trinn 1–8 | 0 dager | 2–3 dager |
+| Løpende kostnad | ~1 USD/mnd | ~5–15 USD/mnd |
+| Diskplass til ~50 GB media | inkludert i Blob | trang på de billigste planene |
+| Vedlikehold av OS, TLS, sikkerhetsoppdateringer | ingen | eierens ansvar, i mange år |
+
+Det som opprinnelig talte for egen server var friksjonen i det *lokale*
+utviklingsmiljøet, ikke driften i Azure. Den friksjonen er nå ryddet og
+dokumentert i `KOM-I-GANG.md`, og den ville uansett ikke forsvunnet av å bytte
+produksjonsplattform.
+
+`plattform/`-oppskriften beholdes. Den er komplett og fungerer, og er verdt å
+ha den dagen en tjeneste faktisk trenger en egen maskin.
+
+---
+
 ## 16. Neste steg
 
 1. **Gå gjennom feltlisten** i [§4.1](#41-faste-felter--skjemadrevet) og juster den til

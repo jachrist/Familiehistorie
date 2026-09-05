@@ -1,5 +1,11 @@
 # Plattformoppsett
 
+> **Status:** Familiehistorie kjører på Azure — se
+> [§15b i omfangsdokumentet](../docs/omfang-og-arkitektur.md) for begrunnelsen.
+> Denne oppskriften er ikke i bruk, men er komplett og etterprøvd så langt
+> maskinvaren tillot, og ligger her til den dagen en tjeneste trenger en egen
+> maskin.
+
 En oppskrift for å kjøre flere små private apper på én maskin — først en
 Raspberry Pi 5 som prøvebenk, senere en VPS. Samme oppskrift begge steder.
 
