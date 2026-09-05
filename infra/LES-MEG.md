@@ -246,6 +246,25 @@ peker ingen steder av seg selv.
 Bygget skjer fortsatt med Node 22 (`engines` i `api/package.json`). Det er
 uproblematisk: TypeScript-utdataen er ES2023, som Node 20 kjører.
 
+### Diagnosesiden
+
+```
+https://<adressen-din>/diagnose.html
+```
+
+Kaller `/api/ping`, `/api/helse`, `/api/meg` og `/api/indeks` fra nettleseren og
+viser **statuskoden og kroppen på skjermen**. Ren statisk HTML, så den virker
+også når API-et ikke gjør det.
+
+Den finnes fordi Safari laster ned `text/plain` i stedet for å vise det, og
+fordi en nedlastet tom fil ikke sier hva som gikk galt. På telefon og nettbrett
+er dette raskeste vei til et svar; `curl -i` gjør samme nytten der du har et
+skall.
+
+Grønn statuskode betyr «svarte som forventet», ikke «alt er bra»: 401 fra
+`/api/meg` er riktig svar når ingen er innlogget. Tomme kropper markeres
+eksplisitt — det er signaturen på at funksjonsverten ikke starter.
+
 ### Loggen
 
 **Static Web Apps har ingen logg før Application Insights er slått på.** Det er
