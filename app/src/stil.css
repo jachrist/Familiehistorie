@@ -915,3 +915,121 @@ mark {
     animation: none;
   }
 }
+
+/* ── Innlogging og tilgang (trinn 9) ─────────────────────────────────────── */
+
+.side-smal {
+  max-width: 520px;
+}
+
+.topp-konto {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--blekk-svak);
+}
+
+.kort {
+  background: var(--flate);
+  border: 1px solid var(--strek);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.skjema {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skjema .ingress {
+  margin: 0 0 8px;
+}
+
+.skjema .knapp {
+  margin-top: 8px;
+  align-self: flex-start;
+}
+
+.skjema-under {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--blekk-svak);
+}
+
+.inndata {
+  font: inherit;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--strek);
+  background: var(--grunn);
+  color: var(--blekk);
+  width: 100%;
+}
+
+.inndata:focus-visible {
+  outline: 2px solid var(--aksent);
+  outline-offset: 1px;
+}
+
+/* Koden leses fra en e-post og tastes inn tegn for tegn. Da hjelper det at
+   sifrene står med luft mellom seg. */
+.inndata-kode {
+  font-size: 24px;
+  letter-spacing: 8px;
+  text-align: center;
+}
+
+.tilgangsliste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tilgangsrad {
+  background: var(--flate);
+  border: 1px solid var(--strek);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+  /* Navnet trenger mindre plass enn adressen, og de to knappene skal ikke
+     stjele bredde fra noen av dem. */
+  grid-template-columns: minmax(140px, 1fr) minmax(220px, 1.6fr) auto auto;
+  align-items: end;
+}
+
+.tilgangsrad-felt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tilgangsrad-roller {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.tilgangsrad-deg {
+  color: var(--blekk-matt);
+  font-size: 13px;
+}
+
+.tilgang-handlinger {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .tilgangsrad {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}

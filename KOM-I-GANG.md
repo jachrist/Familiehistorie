@@ -93,11 +93,35 @@ Deretter, i to skall:
 
 ```bash
 npm run dev          # skall 1: Azurite, bygger API-et, starter SWA CLI
-npm run seed         # skall 2: felter.json + 36 eksempelår (første gang)
+
+# skall 2, første gang. Adressen blir eneste redaktør – bruk din egen.
+REDAKTOER_EPOST=deg@eksempel.no npm run seed
+```
+
+I PowerShell settes miljøvariabelen slik:
+
+```powershell
+$env:REDAKTOER_EPOST = "deg@eksempel.no"; npm run seed
 ```
 
 Åpne <http://localhost:4280>. Eksempelårene har den formen materialet deres
 faktisk har: tynt før 1950, fire til ti år per tiår etterpå.
+
+**Innloggingen lokalt.** Alt ligger bak innlogging fra trinn 9. Skriv adressen
+din, trykk «Send kode» — og hent koden **fra konsollen der API-et kjører**:
+
+```
+  [lokal innlogging] engangskode for deg@eksempel.no: 493015
+```
+
+Uten `ACS_TILKOBLING` og `EPOST_AVSENDER` sendes ingen e-post, og koden skrives
+i loggen i stedet. Det er meningen lokalt. `npm run forbered` har allerede lagt
+inn en tilfeldig `SESJON_HEMMELIGHET` og `MILJO=lokalt` i
+`api/local.settings.json`.
+
+Merk at rate-limiteren gjelder også lokalt: fem kodebestillinger per adresse per
+time. Går du tom under testing, er `npm run clean` (som fjerner `.azurite`) den
+enkleste veien videre.
 
 `npm run dev` gjør tre ting med vilje:
 
@@ -182,7 +206,7 @@ den dagen noen legger inn en. Derfor lages den av `npm run installer` fra
 | `npm run build` | Bygger `api/` og `app/` |
 | `npm run typecheck` | Typesjekker begge uten å bygge |
 | `npm run sjekk` | Forhåndssjekk: Node, `func`, avhengigheter, innstillinger, porter |
-| `npm run forbered` | Lager `api/local.settings.json` hvis den mangler |
+| `npm run forbered` | Lager `api/local.settings.json`, og fyller inn `SESJON_HEMMELIGHET` og `MILJO` |
 | `npm run clean` | Fjerner byggeutdata og lokal lagring |
 
 `npm run proev` skriver og sletter årene 1996–1999 og bygger indeksen på nytt.
@@ -195,8 +219,31 @@ Se [infra/LES-MEG.md](infra/LES-MEG.md). Kort:
 ```bash
 az login
 ./infra/opprett.sh
-npm run seed:sky
+REDAKTOER_EPOST=deg@eksempel.no npm run seed:sky
 ```
+
+Tre appinnstillinger må settes på Static Web App-en før innloggingen virker i
+drift:
+
+| Innstilling | Verdi |
+|---|---|
+| `SESJON_HEMMELIGHET` | Minst 32 tilfeldige tegn. Ikke den samme som lokalt |
+| `ACS_TILKOBLING` | Tilkoblingsstreng til Azure Communication Services |
+| `EPOST_AVSENDER` | Avsenderadressen, f.eks. `ikke-svar@ditt-domene.no` |
+
+```bash
+az staticwebapp appsettings set --name <swa-navn> --setting-names \
+  SESJON_HEMMELIGHET="$(openssl rand -base64 32)" \
+  ACS_TILKOBLING="..." EPOST_AVSENDER="ikke-svar@ditt-domene.no"
+```
+
+`MILJO` settes ikke i Azure — standarden er drift, og da står `Secure` på
+sesjonskapselen.
+
+**Avsenderdomenet bør verifiseres.** Den Azure-genererte avsenderadressen havner
+ofte i søppelpost, og en engangskode som ikke kommer fram er en innlogging som
+ikke virker. DNS-verifiseringen tar gjerne et døgn, så den er verdt å starte før
+resten.
 
 ## Hva som virker nå
 
@@ -207,7 +254,7 @@ livssyklusregler. Static Web App på gratisplanen.
 **Trinn 2 — stillas.** Vite + React + TypeScript i `app/`, Azure Functions i
 `api/`, delte typer i `delt/typer.d.ts`, lokal kjøring mot Azurite.
 
-**Trinn 3 — API.** Åtte endepunkter:
+**Trinn 3 — API.** Femten endepunkter:
 
 | | |
 |---|---|
@@ -218,6 +265,10 @@ livssyklusregler. Static Web App på gratisplanen.
 | `DELETE /api/aar/{aar}` | Sletting. Mediefiler blir liggende med vilje |
 | `POST /api/media/opplasting` | Skrive-SAS for inntil 60 filer i ett kall |
 | `POST /api/vedlikehold/bygg-indeks` | Bygger `indeks.json` fra årsdokumentene |
+| `POST /api/vedlikehold/rydd-media` | Sletter mediefiler ingen år viser til |
+| `POST /api/auth/kode` · `POST /api/auth/verifiser` | Engangskode og innlogging |
+| `GET /api/meg` · `POST /api/auth/logg-ut` | Hvem er innlogget, og utlogging |
+| `GET /api/tilgang` · `PUT /api/tilgang` | Tilgangslisten |
 
 **Trinn 4 — forsiden.** Årsliste gruppert på tiår, utfolding på stedet,
 permalenker på `/aar/1972` som ruller året til syne ved innlasting.
@@ -239,10 +290,20 @@ Kjøres i nettleseren mot indeksdokumentet, så ingen nettverkskall per tastetry
 Prefiks, toleranse for skrivefeil, og både «sørlandet» og «sorlandet». Hvert
 treff viser et utdrag rundt treffordet. `/` setter markøren i feltet, Esc tømmer.
 
+**Trinn 9 — innlogging.** Engangskode på e-post, uten Entra og uten
+Microsoft-kontoer. Sesjonen ligger i en `httpOnly`-kapsel klienten ikke kan
+lese; `krevRolle()` i `api/src/vakt.ts` sjekker den ved hvert kall og slår opp
+rollene i `innhold/tilgang.json` hver gang, så en fjernet person mister
+tilgangen umiddelbart. Koden er sekssifret, varer i ti minutter, tåler fem
+forsøk, og kan bestilles fem ganger per adresse per time. Tilgangslisten
+redigeres på `/tilgang` av en redaktør. Dyplenker overlever innlogging: URL-en
+står, og siden vises når koden er godtatt.
+
 ## Hva som bevisst ikke virker ennå
 
-- **Innlogging** — trinn 9. `api/src/vakt.ts` har formen på plass og slipper alt
-  gjennom; konstanten `INNLOGGING_MANGLER` markerer stedet.
+- **Video** — trinn 10. Blokkvis opplasting virker, men plakatbilde, avspilling
+  og advarsel om utranskodet fil gjenstår.
+- **Mobiltilpasning og tomtilstander** — trinn 11.
 
 ## Om koden
 

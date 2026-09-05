@@ -108,6 +108,41 @@ async function skriv(container, sti, verdi) {
     });
 }
 
+/**
+ * Tilgangslisten er den ene filen som ikke skal overskrives. Den inneholder
+ * ekte adresser så snart nettstedet er i bruk, og en seed som nullstilte den
+ * ville låst familien ute.
+ */
+async function seedTilgang() {
+  const blob = tjeneste.getContainerClient("innhold").getBlockBlobClient("tilgang.json");
+  if (await blob.exists()) {
+    console.log("• tilgang.json finnes allerede – røres ikke");
+    return;
+  }
+
+  const epost = process.env.REDAKTOER_EPOST?.trim().toLowerCase();
+  if (!epost) {
+    console.error(
+      "\n✖ tilgang.json mangler, og REDAKTOER_EPOST er ikke satt.\n" +
+        "  Uten en adresse på listen kan ingen logge inn. Kjør f.eks.:\n\n" +
+        "    REDAKTOER_EPOST=deg@eksempel.no npm run seed\n" +
+        "    $env:REDAKTOER_EPOST='deg@eksempel.no'; npm run seed    (PowerShell)\n"
+    );
+    process.exit(1);
+  }
+
+  await skriv("innhold", "tilgang.json", {
+    personer: [
+      {
+        epost,
+        navn: process.env.REDAKTOER_NAVN?.trim() || "Redaktør",
+        roller: ["familie", "redaktoer"],
+      },
+    ],
+  });
+  console.log(`✓ tilgang.json med ${epost} som redaktør`);
+}
+
 async function main() {
   for (const navn of ["innhold", "media", "originaler"]) {
     await tjeneste.getContainerClient(navn).createIfNotExists();
@@ -115,6 +150,8 @@ async function main() {
 
   await skriv("innhold", "felter.json", FELTER);
   console.log("✓ felter.json");
+
+  await seedTilgang();
 
   const dokumenter = AAR.map(lagAar);
   for (const dok of dokumenter) {

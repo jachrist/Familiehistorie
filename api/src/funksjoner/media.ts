@@ -42,8 +42,8 @@ app.http("mediaOpplasting", {
   route: "media/opplasting",
   authLevel: "anonymous",
   handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
-    const nektet = krevRolle("redaktoer", req);
-    if (nektet) return nektet;
+    const vakt = await krevRolle("redaktoer", req);
+    if (vakt.nektet) return vakt.nektet;
 
     let raa: unknown;
     try {
@@ -103,8 +103,8 @@ app.http("mediaRydd", {
   route: "vedlikehold/rydd-media",
   authLevel: "anonymous",
   handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
-    const nektet = krevRolle("redaktoer", req);
-    if (nektet) return nektet;
+    const vakt = await krevRolle("redaktoer", req);
+    if (vakt.nektet) return vakt.nektet;
 
     const aarstall = await listAarstall();
     const dokumenter = await Promise.all(

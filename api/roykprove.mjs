@@ -13,6 +13,10 @@
  * Kjør den ikke mot ekte data.
  */
 process.env.LAGER_TILKOBLING = "UseDevelopmentStorage=true";
+process.env.MILJO = "lokalt";
+// Fast nøkkel: prøven skal gi samme resultat hver gang, og verdien forlater
+// aldri denne prosessen.
+process.env.SESJON_HEMMELIGHET = "roykprove-noekkel-som-er-lang-nok-32+";
 
 const ruter = [];
 const funcs = await import("@azure/functions");
@@ -25,8 +29,25 @@ function finn(metode, rute) {
   return t;
 }
 
-function req({ method = "GET", params = {}, headers = {}, body }) {
-  const h = new Map(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]));
+const REDAKTOER = "proeve-redaktoer@eksempel.no";
+const FAMILIE = "proeve-familie@eksempel.no";
+
+const { utstedToken, KAPSELNAVN } = await import("./dist/src/sesjon.js");
+const { CONTAINER, STI, lesJson, skrivJson, sikreContainere } = await import("./dist/src/lager.js");
+const { tomBuffer } = await import("./dist/src/tilgang.js");
+const { slettTabeller } = await import("./dist/src/tabell.js");
+const { kanBestille, lagKode } = await import("./dist/src/kode.js");
+
+function kapsel(som) {
+  if (som === "ingen") return {};
+  if (som === "tull") return { cookie: `${KAPSELNAVN}=ikke.et.token` };
+  return { cookie: `${KAPSELNAVN}=${utstedToken(som === "familie" ? FAMILIE : REDAKTOER)}` };
+}
+
+function req({ method = "GET", params = {}, headers = {}, body, som = "redaktoer" }) {
+  const h = new Map(
+    Object.entries({ ...kapsel(som), ...headers }).map(([k, v]) => [k.toLowerCase(), v])
+  );
   return {
     method,
     params,
@@ -56,6 +77,34 @@ async function proev(navn, forventet, kjor) {
 
 const PROEVEAAR = ["1996", "1997", "1998", "1999"];
 
+/**
+ * Prøven trenger sin egen tilgangsliste. Den ekte lokale listen legges til side
+ * og settes tilbake til slutt – en røykprøve skal ikke endre hvem som kommer
+ * inn på utviklingsmaskinen.
+ */
+let opprinneligTilgang;
+
+async function settOppTilgang() {
+  await sikreContainere();
+  opprinneligTilgang = await lesJson(CONTAINER.innhold, STI.tilgang);
+  await skrivJson(CONTAINER.innhold, STI.tilgang, {
+    personer: [
+      { epost: REDAKTOER, navn: "Prøve Redaktør", roller: ["familie", "redaktoer"] },
+      { epost: FAMILIE, navn: "Prøve Familie", roller: ["familie"] },
+    ],
+  });
+  tomBuffer();
+  await slettTabeller();
+}
+
+async function gjenopprettTilgang() {
+  if (opprinneligTilgang) {
+    await skrivJson(CONTAINER.innhold, STI.tilgang, opprinneligTilgang.verdi);
+  }
+  tomBuffer();
+  await slettTabeller();
+}
+
 /** Rydder før prøven. Et avbrutt kjør skal ikke velte det neste. */
 async function rydd() {
   for (const a of PROEVEAAR) {
@@ -64,7 +113,63 @@ async function rydd() {
   await finn("POST", "vedlikehold/bygg-indeks").handler(req({ method: "POST", headers: JSONH, body: {} }));
 }
 
+await settOppTilgang();
 await rydd();
+
+console.log("\nInnlogging og adgangskontroll");
+await proev("GET /api/indeks uten kapsel → 401", 401, () =>
+  finn("GET", "indeks").handler(req({ som: "ingen" })));
+await proev("GET /api/indeks med ugyldig token → 401", 401, () =>
+  finn("GET", "indeks").handler(req({ som: "tull" })));
+const meg = await proev("GET /api/meg", 200, () => finn("GET", "meg").handler(req({})));
+console.log(`         → ${meg.jsonBody?.epost} med rollene ${meg.jsonBody?.roller?.join(", ")}`);
+await proev("GET /api/meg uten kapsel → 401", 401, () =>
+  finn("GET", "meg").handler(req({ som: "ingen" })));
+await proev("PUT år som familie (ikke redaktør) → 403", 403, () =>
+  finn("PUT", "aar/{aar}").handler(req({ method: "PUT", params: { aar: "1997" }, headers: JSONH, body: { felter: { tittel: "Nei" }, media: [] }, som: "familie" })));
+await proev("GET /api/tilgang som familie → 403", 403, () =>
+  finn("GET", "tilgang").handler(req({ som: "familie" })));
+await proev("GET /api/tilgang som redaktør", 200, () =>
+  finn("GET", "tilgang").handler(req({})));
+
+console.log("\nEngangskode");
+await proev("POST /api/auth/kode, ukjent adresse → 202", 202, () =>
+  finn("POST", "auth/kode").handler(req({ method: "POST", headers: JSONH, body: { epost: "ingen@eksempel.no" }, som: "ingen" })));
+await proev("POST /api/auth/kode, kjent adresse → 202", 202, () =>
+  finn("POST", "auth/kode").handler(req({ method: "POST", headers: JSONH, body: { epost: REDAKTOER }, som: "ingen" })));
+await proev("POST /api/auth/verifiser med feil kode → 401", 401, () =>
+  finn("POST", "auth/verifiser").handler(req({ method: "POST", headers: JSONH, body: { epost: REDAKTOER, kode: "000000" }, som: "ingen" })));
+
+const ekteKode = await lagKode(FAMILIE);
+const innlogging = await proev("POST /api/auth/verifiser med riktig kode", 200, () =>
+  finn("POST", "auth/verifiser").handler(req({ method: "POST", headers: JSONH, body: { epost: FAMILIE, kode: ekteKode }, som: "ingen" })));
+const settKapsel = innlogging.headers?.["Set-Cookie"] ?? "";
+const kapselOk = settKapsel.includes(`${KAPSELNAVN}=`) && settKapsel.includes("HttpOnly") && settKapsel.includes("SameSite=Strict") && settKapsel.includes("Path=/api");
+console.log(`  ${kapselOk ? "ok  " : "FEIL"}  ${"Set-Cookie er HttpOnly, Strict, Path=/api".padEnd(46)}`);
+if (!kapselOk) { feilet++; console.log("         →", settKapsel); }
+await proev("Samme kode en gang til → 401 (forbrukt)", 401, () =>
+  finn("POST", "auth/verifiser").handler(req({ method: "POST", headers: JSONH, body: { epost: FAMILIE, kode: ekteKode }, som: "ingen" })));
+
+const forsokKode = await lagKode(FAMILIE);
+for (let i = 0; i < 4; i++) {
+  await finn("POST", "auth/verifiser").handler(req({ method: "POST", headers: JSONH, body: { epost: FAMILIE, kode: "111111" }, som: "ingen" }));
+}
+await proev("Femte feilforsøk → 429, koden forkastes", 429, () =>
+  finn("POST", "auth/verifiser").handler(req({ method: "POST", headers: JSONH, body: { epost: FAMILIE, kode: "111111" }, som: "ingen" })));
+await proev("Riktig kode etter forkasting → 401", 401, () =>
+  finn("POST", "auth/verifiser").handler(req({ method: "POST", headers: JSONH, body: { epost: FAMILIE, kode: forsokKode }, som: "ingen" })));
+
+const bestillinger = [];
+for (let i = 0; i < 6; i++) bestillinger.push(await kanBestille("takst@eksempel.no"));
+const takstOk = bestillinger.slice(0, 5).every(Boolean) && bestillinger[5] === false;
+console.log(`  ${takstOk ? "ok  " : "FEIL"}  ${"Maks 5 kodebestillinger per time".padEnd(46)}`);
+if (!takstOk) { feilet++; console.log("         →", bestillinger.join(", ")); }
+
+const utlogget = await proev("POST /api/auth/logg-ut", 200, () =>
+  finn("POST", "auth/logg-ut").handler(req({ method: "POST", headers: JSONH, body: {} })));
+const tommer = (utlogget.headers?.["Set-Cookie"] ?? "").includes("Max-Age=0");
+console.log(`  ${tommer ? "ok  " : "FEIL"}  ${"Utlogging tømmer kapselen".padEnd(46)}`);
+if (!tommer) feilet++;
 
 console.log("\nLesing");
 const indeks = await proev("GET /api/indeks", 200, () => finn("GET", "indeks").handler(req({})));
@@ -116,7 +221,18 @@ const bygg = await proev("POST /api/vedlikehold/bygg-indeks", 200, () =>
 console.log(`         → ${bygg.jsonBody?.aar?.length ?? 0} år i indeksen`);
 await proev("DELETE /api/aar/1996", 200, () => finn("DELETE", "aar/{aar}").handler(req({ method: "DELETE", params: { aar: "1996" } })));
 await proev("DELETE samme år igjen → 404", 404, () => finn("DELETE", "aar/{aar}").handler(req({ method: "DELETE", params: { aar: "1996" } })));
+
+console.log("\nTilgangslisten");
+const liste = await finn("GET", "tilgang").handler(req({}));
+await proev("PUT tilgang uten redaktør → 422", 422, () =>
+  finn("PUT", "tilgang").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": liste.jsonBody.etag }, body: { personer: [{ epost: FAMILIE, navn: "Alene", roller: ["familie"] }] } })));
+await proev("PUT tilgang med duplikat adresse → 422", 422, () =>
+  finn("PUT", "tilgang").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": liste.jsonBody.etag }, body: { personer: [{ epost: REDAKTOER, navn: "En", roller: ["redaktoer"] }, { epost: REDAKTOER, navn: "To", roller: ["familie"] }] } })));
+await proev("PUT tilgang med feil If-Match → 412", 412, () =>
+  finn("PUT", "tilgang").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": '"0x8DFEIL"' }, body: { personer: [{ epost: REDAKTOER, navn: "Prøve Redaktør", roller: ["familie", "redaktoer"] }] } })));
+
 await rydd();
+await gjenopprettTilgang();
 
 console.log(feilet === 0 ? "\nAlle kontroller gikk gjennom.\n" : `\n${feilet} kontroller feilet.\n`);
 process.exit(feilet === 0 ? 0 : 1);

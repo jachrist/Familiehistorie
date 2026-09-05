@@ -33,8 +33,8 @@ app.http("aarHent", {
   route: "aar/{aar}",
   authLevel: "anonymous",
   handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
-    const nektet = krevRolle("familie", req);
-    if (nektet) return nektet;
+    const vakt = await krevRolle("familie", req);
+    if (vakt.nektet) return vakt.nektet;
 
     const aar = lesAarstall(req.params.aar);
     if (aar === undefined) return feil(400, "Ugyldig årstall.");
@@ -56,8 +56,8 @@ app.http("aarLagre", {
   route: "aar/{aar}",
   authLevel: "anonymous",
   handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
-    const nektet = krevRolle("redaktoer", req);
-    if (nektet) return nektet;
+    const vakt = await krevRolle("redaktoer", req);
+    if (vakt.nektet) return vakt.nektet;
 
     const aar = lesAarstall(req.params.aar);
     if (aar === undefined) return feil(400, "Ugyldig årstall.");
@@ -92,8 +92,7 @@ app.http("aarLagre", {
       status: validert.verdi.status,
       opprettet: fra?.verdi.opprettet ?? naa,
       endret: naa,
-      // Trinn 9 setter denne fra den innloggede. Fram til da er den ærlig tom.
-      endretAv: fra?.verdi.endretAv ?? "",
+      endretAv: vakt.person.epost,
       skjemaversjon: skjema.verdi.versjon,
     };
 
@@ -131,8 +130,8 @@ app.http("aarSlett", {
   route: "aar/{aar}",
   authLevel: "anonymous",
   handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
-    const nektet = krevRolle("redaktoer", req);
-    if (nektet) return nektet;
+    const vakt = await krevRolle("redaktoer", req);
+    if (vakt.nektet) return vakt.nektet;
 
     const aar = lesAarstall(req.params.aar);
     if (aar === undefined) return feil(400, "Ugyldig årstall.");

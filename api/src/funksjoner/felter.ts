@@ -10,8 +10,8 @@ app.http("felterHent", {
   route: "felter",
   authLevel: "anonymous",
   handler: async (req): Promise<HttpResponseInit> => {
-    const nektet = krevRolle("familie", req);
-    if (nektet) return nektet;
+    const vakt = await krevRolle("familie", req);
+    if (vakt.nektet) return vakt.nektet;
 
     const lest = await lesJson<Feltskjema>(CONTAINER.innhold, STI.felter);
     if (!lest) {
@@ -29,8 +29,8 @@ app.http("felterLagre", {
   route: "felter",
   authLevel: "anonymous",
   handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
-    const nektet = krevRolle("redaktoer", req);
-    if (nektet) return nektet;
+    const vakt = await krevRolle("redaktoer", req);
+    if (vakt.nektet) return vakt.nektet;
 
     let raa: unknown;
     try {

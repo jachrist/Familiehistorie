@@ -10,7 +10,7 @@ I tillegg skal det være en søkeboks der en kan søke i alle tekster på sidene
 Jeg ønsker å benytte min vanlige arkitektur - Azure Static Web app for sider, api-lag, lagring i Blob storage.
 
 ### Status
-**Fase 1, trinn 1–8 er bygget.** Oppsett, kommandoer og hva som virker:
+**Fase 1, trinn 1–9 er bygget.** Oppsett, kommandoer og hva som virker:
 [KOM-I-GANG.md](KOM-I-GANG.md).
 
 Krever **Node 22** — nøyaktig 22, siden Azure Functions ikke støtter Node 24 —
@@ -20,24 +20,31 @@ og **Azure Functions Core Tools v4**
 ```bash
 npm install && npm run installer
 npm run dev         # skall 1: Azurite + API + frontend
-npm run seed        # skall 2: eksempeldata, første gang
+
+# skall 2, første gang. Adressen blir eneste redaktør – bruk din egen.
+REDAKTOER_EPOST=deg@eksempel.no npm run seed
 ```
 
-Åpne <http://localhost:4280>.
+Åpne <http://localhost:4280>. Innloggingskoden skrives i konsollen der API-et
+kjører så lenge e-postutsending ikke er satt opp.
 
 - **Trinn 1** — Bicep og skript for lagringskonto, containere og Static Web App
 - **Trinn 2** — Vite + React + TypeScript, Azure Functions, delte typer, Azurite lokalt
-- **Trinn 3** — åtte API-endepunkter med ETag-samtidighet, validering fra
+- **Trinn 3** — API-endepunkter med ETag-samtidighet, validering fra
   `felter.json`, sanitering server-side og kortlevde SAS-URL-er
 - **Trinn 4** — forsiden: årsliste gruppert på tiår, utfolding på stedet, permalenker
 - **Trinn 5** — årsside med tekstfelter og mediegalleri
 - **Trinn 6** — redigering: skjema generert fra `felter.json`, rik tekst, autolagring
 - **Trinn 7** — masseopplasting med nedskalering, EXIF, fremdrift og bildetekstliste
 - **Trinn 8** — søk i nettleseren som filtrerer årslisten, med utdrag rundt treffet
+- **Trinn 9** — innlogging med engangskode på e-post, sesjon i `httpOnly`-kapsel,
+  rollesjekk i hvert endepunkt, tilgangsliste som redigeres i appen, rate-limiting
 
-Trinn 9–11 gjenstår. `npm run proev` kjører en røykprøve av API-et mot Azurite.
+Trinn 10 (video) og 11 (mobil, tomtilstander, sikkerhetskopijobb) gjenstår.
+`npm run proev` kjører en røykprøve av API-et mot Azurite.
 
-> **Ingen innlogging før trinn 9.** Ikke last opp ekte familiebilder ennå.
+> **Innloggingen er på plass.** Alt innhold ligger bak engangskode på e-post, og
+> mediefiler serveres bare med kortlevde SAS-URL-er utstedt av API-et.
 
 ### Plattformoppsett
 `plattform/` inneholder en oppskrift for å kjøre appene på egen server —

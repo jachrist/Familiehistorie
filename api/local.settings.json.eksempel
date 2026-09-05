@@ -3,6 +3,16 @@
   "Values": {
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "LAGER_TILKOBLING": "UseDevelopmentStorage=true"
+    "LAGER_TILKOBLING": "UseDevelopmentStorage=true",
+
+    "_kommentar_miljo": "lokalt slår av Secure på sesjonskapselen. I Azure skal denne være drift, eller ikke settes.",
+    "MILJO": "lokalt",
+
+    "_kommentar_hemmelighet": "Signerer sesjonstokenet. Fylles med en tilfeldig verdi av `npm run forbered`. Minst 32 tegn.",
+    "SESJON_HEMMELIGHET": "",
+
+    "_kommentar_epost": "Uten disse skrives engangskoden i konsollen i stedet for å sendes på e-post. Det er meningen lokalt.",
+    "ACS_TILKOBLING": "",
+    "EPOST_AVSENDER": ""
   }
 }

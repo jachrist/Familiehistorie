@@ -123,3 +123,29 @@ export interface Apifeil {
   feil: string;
   detaljer?: unknown;
 }
+
+/** Roller. `redaktoer` innebærer `familie`. */
+export type Rolle = "familie" | "redaktoer";
+
+/** Én person i innhold/tilgang.json. */
+export interface Person {
+  epost: string;
+  navn: string;
+  roller: Rolle[];
+}
+
+export interface Tilgangsliste {
+  personer: Person[];
+}
+
+/** Tilgangslisten slik API-et leverer den, med ETag for samtidighet. */
+export interface TilgangslisteMedEtag extends Tilgangsliste {
+  etag: string;
+}
+
+/** Svaret fra GET /api/meg. 401 når ingen er innlogget. */
+export interface Innlogget {
+  epost: string;
+  navn: string;
+  roller: Rolle[];
+}

@@ -10,8 +10,8 @@ app.http("indeksHent", {
   route: "indeks",
   authLevel: "anonymous",
   handler: async (req): Promise<HttpResponseInit> => {
-    const nektet = krevRolle("familie", req);
-    if (nektet) return nektet;
+    const vakt = await krevRolle("familie", req);
+    if (vakt.nektet) return vakt.nektet;
 
     const lest = await lesJson<Indeks>(CONTAINER.innhold, STI.indeks);
     // Mangler indeksen, bygges den heller enn å feile. Den er avledet data, og
@@ -32,8 +32,8 @@ app.http("indeksBygg", {
   route: "vedlikehold/bygg-indeks",
   authLevel: "anonymous",
   handler: async (req): Promise<HttpResponseInit> => {
-    const nektet = krevRolle("redaktoer", req);
-    if (nektet) return nektet;
+    const vakt = await krevRolle("redaktoer", req);
+    if (vakt.nektet) return vakt.nektet;
 
     try {
       return json(await byggIndeks());

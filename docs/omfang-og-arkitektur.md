@@ -841,7 +841,7 @@ fase 1 dekker behovet.
 
 | Risiko | Konsekvens | Håndtering |
 |---|---|---|
-| Endepunkt glemmer `krevRolle()` | Det endepunktet er åpent for alle, og CSRF-vernet faller bort | Autorisasjon er nå kode, ikke konfigurasjon: felles hjelper som også håndhever `Content-Type`, egne tester, og en test som feiler hvis en rute mangler den |
+| Endepunkt glemmer `krevRolle()` | Det endepunktet er åpent for alle, og CSRF-vernet faller bort | Autorisasjon er kode, ikke konfigurasjon: felles hjelper som også håndhever `Content-Type`. Røykprøven kaller hvert endepunkt uten kapsel og krever 401 |
 | Stored XSS i rik tekst | Skript kan handle som den innloggede så lenge fanen er åpen | Sanitering server-side, streng CSP, ingen tredjepartsskript. `httpOnly`-kapselen hindrer at sesjonen kan stjeles og brukes senere, men ikke angrepet i seg selv ([§9.6](#96-xss-er-fortsatt-den-viktige-risikoen)) |
 | Engangskode brute-forces | Uvedkommende kommer inn | Maks 5 forsøk per kode, maks 5 bestillinger per adresse per time, 10 min utløp |
 | Kodene havner i søppelpost | Ingen får logget inn | Verifisert avsenderdomene, ikke den Azure-genererte adressen |

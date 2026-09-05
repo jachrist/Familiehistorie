@@ -9,8 +9,11 @@ import type {
   AarsdokumentMedUrl,
   Feltskjema,
   Indeks,
+  Innlogget,
   Opplastingsforesporsel,
   Opplastingssvar,
+  Tilgangsliste,
+  TilgangslisteMedEtag,
 } from "../../../delt/typer.js";
 
 export class Apifeil extends Error {
@@ -25,6 +28,10 @@ export class Apifeil extends Error {
   /** Sann når året er endret et annet sted siden vi hentet det. */
   get erKonflikt() {
     return this.status === 409 || this.status === 412;
+  }
+  /** Sann når sesjonen mangler eller er utløpt. */
+  get erUinnlogget() {
+    return this.status === 401;
   }
 }
 
@@ -56,6 +63,39 @@ async function hent<T>(sti: string, init?: RequestInit): Promise<T> {
 const JSONHODER = { "content-type": "application/json" };
 
 export const api = {
+  /** Hvem er innlogget. Kaster Apifeil med status 401 når ingen er det. */
+  meg: () => hent<Innlogget>("/api/meg"),
+
+  bestillKode: (epost: string) =>
+    hent<{ sendt: boolean; gyldigMinutter: number; beskjed: string }>("/api/auth/kode", {
+      method: "POST",
+      headers: JSONHODER,
+      body: JSON.stringify({ epost }),
+    }),
+
+  verifiserKode: (epost: string, kode: string) =>
+    hent<Innlogget>("/api/auth/verifiser", {
+      method: "POST",
+      headers: JSONHODER,
+      body: JSON.stringify({ epost, kode }),
+    }),
+
+  loggUt: () =>
+    hent<{ loggetUt: boolean }>("/api/auth/logg-ut", {
+      method: "POST",
+      headers: JSONHODER,
+      body: "{}",
+    }),
+
+  tilgang: () => hent<TilgangslisteMedEtag>("/api/tilgang"),
+
+  lagreTilgang: (liste: Tilgangsliste, etag: string) =>
+    hent<TilgangslisteMedEtag>("/api/tilgang", {
+      method: "PUT",
+      headers: { ...JSONHODER, "If-Match": etag },
+      body: JSON.stringify(liste),
+    }),
+
   indeks: () => hent<Indeks>("/api/indeks"),
   felter: () => hent<Feltskjema>("/api/felter"),
   aar: (aar: number) => hent<AarsdokumentMedUrl>(`/api/aar/${aar}`),
@@ -87,6 +127,8 @@ export const api = {
 
 /** Nøkler for TanStack Query. Samlet ett sted så invalidering blir presis. */
 export const noekler = {
+  meg: ["meg"] as const,
+  tilgang: ["tilgang"] as const,
   indeks: ["indeks"] as const,
   felter: ["felter"] as const,
   aar: (aar: number) => ["aar", aar] as const,

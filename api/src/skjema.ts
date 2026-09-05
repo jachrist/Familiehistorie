@@ -130,3 +130,31 @@ export const feltskjemaSkjema = z.object({
     .min(1)
     .max(50),
 });
+
+/**
+ * Tilgangslisten. Navnet saniteres som kort tekst – det vises i GUI-et, og en
+ * liste over familiemedlemmer skal ikke kunne bli en vei inn for markup.
+ *
+ * Minst én redaktør må stå igjen. Uten den regelen kan en redaktør fjerne sin
+ * egen rolle og låse alle ute av redigeringen, uten noen vei tilbake i appen.
+ */
+export const tilgangslisteSkjema = z
+  .object({
+    personer: z
+      .array(
+        z.object({
+          epost: z.string().trim().toLowerCase().min(3).max(254).email(),
+          navn: z.string().trim().min(1).max(120).transform(saniterKortTekst),
+          roller: z.array(z.enum(["familie", "redaktoer"])).min(1).max(2),
+        })
+      )
+      .min(1)
+      .max(200),
+  })
+  .refine((l) => l.personer.some((p) => p.roller.includes("redaktoer")), {
+    message: "Minst én person må ha rollen «redaktoer».",
+  })
+  .refine(
+    (l) => new Set(l.personer.map((p) => p.epost)).size === l.personer.length,
+    { message: "Samme e-postadresse står oppført flere ganger." }
+  );

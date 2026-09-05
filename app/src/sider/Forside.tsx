@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import type { Indeksrad } from "../../../delt/typer.js";
 import { Apifeil, api, noekler } from "../api/klient.js";
+import { useLoggUt, useOkt } from "../auth/okt.js";
 import { AarRad } from "../komponenter/AarRad.js";
 import { Sokefelt } from "../komponenter/Sokefelt.js";
 import { TiaarsGruppe } from "../komponenter/TiaarsGruppe.js";
@@ -29,6 +30,8 @@ function grupperPaaTiaar(rader: Indeksrad[]): Gruppe[] {
 
 export function Forside() {
   const tilstand = useQuery({ queryKey: noekler.indeks, queryFn: api.indeks });
+  const { innlogget, erRedaktoer } = useOkt();
+  const loggUt = useLoggUt();
   const [spoersmaal, settSpoersmaal] = useState("");
   // Feltet skal svare umiddelbart selv om filtreringen ligger et hakk bak.
   const utsatt = useDeferredValue(spoersmaal);
@@ -82,10 +85,32 @@ export function Forside() {
         <h1>Familiehistorie</h1>
         <div className="topp-rad">
           <p className="ingress">Ett år, én side. Velg et årstall for å folde det ut.</p>
-          <Link to="/rediger/nytt" className="knapp">
-            Nytt år
-          </Link>
+          {erRedaktoer && (
+            <Link to="/rediger/nytt" className="knapp">
+              Nytt år
+            </Link>
+          )}
         </div>
+        <p className="topp-konto">
+          <span>Innlogget som {innlogget?.navn || innlogget?.epost}</span>
+          {erRedaktoer && (
+            <>
+              {" · "}
+              <Link to="/tilgang" className="knapp-lenke">
+                Tilgang
+              </Link>
+            </>
+          )}
+          {" · "}
+          <button
+            type="button"
+            className="lenkeknapp"
+            onClick={() => loggUt.mutate()}
+            disabled={loggUt.isPending}
+          >
+            Logg ut
+          </button>
+        </p>
       </header>
 
       {tilstand.isSuccess && (alle?.length ?? 0) > 0 && (
@@ -123,7 +148,12 @@ export function Forside() {
           <p>Ingen år er lagt inn ennå.</p>
           <p className="beskjed-hjelp">
             Kjør <code>npm run seed</code> for eksempelår, eller{" "}
-            <Link to="/rediger/nytt">opprett det første året</Link>.
+            {erRedaktoer ? (
+              <Link to="/rediger/nytt">opprett det første året</Link>
+            ) : (
+              "be en redaktør legge inn det første året"
+            )}
+            .
           </p>
         </div>
       )}
@@ -144,7 +174,7 @@ export function Forside() {
       ))}
 
       <footer className="bunn">
-        <p>Trinn 1–8 av fase 1. Innlogging kommer i trinn 9.</p>
+        <p>Trinn 1–9 av fase 1. Video og mobiltilpasning gjenstår.</p>
       </footer>
     </main>
   );
