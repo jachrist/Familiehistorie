@@ -133,12 +133,28 @@ Uten `ACS_TILKOBLING` og `EPOST_AVSENDER` kommer ingen engangskoder fram, og da
 kan ingen logge inn i drift. API-et feiler høylytt i loggen i stedet for å late
 som om e-posten gikk.
 
-1. Opprett en Email Communication Service og en Communication Services-ressurs
-   (portalen er greiest første gang — søk etter «Email Communication Service»).
-2. Legg til et domene. Et **Azure-håndtert** domene virker uten DNS-arbeid og er
-   fint for å teste at innloggingen funker, men havner lett i søppelpost. Eget,
-   verifisert domene er det som virker i lengden.
-3. Koble domenet til Communication Services-ressursen, og sett innstillingene:
+**Det er to ressurser, ikke én.** Det er her folk går seg vill:
+
+| Ressurs | Rolle |
+|---|---|
+| **Email Communication Service** | Eier avsenderdomenet. Har ingen tilkoblingsstreng |
+| **Communication Service** | Sender e-posten. Det er *denne* som har tilkoblingsstrengen |
+
+Domenet opprettes i den første og må **kobles til** den andre. Gjør du bare det
+ene, får du en tilkoblingsstreng som ikke kan sende fra noe domene.
+
+1. Opprett en **Email Communication Service** (portalen, søk på navnet).
+   Datalokasjon Europe.
+2. Under den: **Provision domains → Add domain**. Et **Azure-håndtert** domene
+   er ferdig med én gang og krever ingen DNS — bruk det for å bevise at
+   innloggingen virker. Avsenderadressen blir da noe i retning av
+   `DoNotReply@abc123.azurecomm.net`, og den havner lett i søppelpost. Et eget,
+   verifisert domene (f.eks. `post.dittdomene.no`) er det som virker i lengden,
+   men krever TXT-, SPF- og DKIM-oppføringer og et døgns venting.
+3. Opprett en **Communication Service** i samme ressursgruppe.
+4. I den: **Email → Domains → Connect domain**, og velg domenet fra punkt 2.
+5. Hent tilkoblingsstrengen fra Communication Service → **Keys**, og sett
+   innstillingene:
 
 ```bash
 az staticwebapp appsettings set -n famhist-web -g rg-familiehistorie \
@@ -146,5 +162,15 @@ az staticwebapp appsettings set -n famhist-web -g rg-familiehistorie \
                   EPOST_AVSENDER="ikke-svar@dittdomene.no"
 ```
 
+Kontroller at de kom inn:
+
+```bash
+az staticwebapp appsettings list -n famhist-web -g rg-familiehistorie -o table
+```
+
 `MILJO` settes ikke i Azure. Standarden er drift, og da står `Secure` på
 sesjonskapselen.
+
+Virker det ikke, er rekkefølgen å sjekke: kommer e-posten i søppelpost, er
+avsenderadressen skrevet nøyaktig slik den står i domeneoversikten, og er
+domenet faktisk koblet til Communication Service-ressursen.
