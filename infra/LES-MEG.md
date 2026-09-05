@@ -195,6 +195,59 @@ az staticwebapp appsettings list -n famhist-web -g rg-familiehistorie -o table
 `MILJO` settes ikke i Azure. Standarden er drift, og da står `Secure` på
 sesjonskapselen.
 
-Virker det ikke, er rekkefølgen å sjekke: kommer e-posten i søppelpost, er
-avsenderadressen skrevet nøyaktig slik den står i domeneoversikten, og er
-domenet faktisk koblet til Communication Service-ressursen.
+### Når koden ikke kommer fram
+
+`/api/auth/kode` svarer alltid 202, uansett hva som gikk galt — ellers ville
+endepunktet røpet hvem som står på tilgangslisten. Riktig, men det gjør at et
+manglende oppsett ser nøyaktig ut som et vellykket kall. Derfor finnes
+
+```
+https://<adressen-din>/api/helse
+```
+
+Den svarer uten innlogging, med ja/nei for hver del av oppsettet og en
+merknadsliste — aldri med verdier, og aldri med hvem som står på listen.
+
+```json
+{
+  "lager": true,
+  "tilgangsliste": true,
+  "antallPersoner": 1,
+  "epostOppsett": false,
+  "avsenderdomene": null,
+  "sesjonsnokkel": true,
+  "merknader": ["ACS_TILKOBLING og/eller EPOST_AVSENDER mangler. …"]
+}
+```
+
+Sier den at alt er på plass, men koden likevel uteblir, er rekkefølgen:
+
+1. **Søppelpost.** Azure-håndterte avsenderdomener havner der ofte.
+2. **Står adressen på tilgangslisten?** `antallPersoner` sier hvor mange som
+   står der, ikke hvem. Er den 1, og du prøver en annen adresse enn den du
+   seedet med, kommer det ingen kode — det er meningen.
+3. **Er `EPOST_AVSENDER` skrevet nøyaktig** slik den står under domenets
+   *MailFrom addresses*? Den er ofte `DoNotReply@<guid>.azurecomm.net`.
+4. **Er domenet koblet til Communication Service-ressursen?** Er det ikke det,
+   feiler utsendingen med `DomainNotLinked`, og det ser du bare i loggen.
+
+### Loggen
+
+**Static Web Apps har ingen logg før Application Insights er slått på.** Det er
+det som mangler når det ikke står noe noe sted.
+
+På Static Web App-en: **Settings → Application Insights → On**, og la Azure
+opprette en ressurs. Utsendingsfeil fra API-et havner da under
+**Application Insights → Logs**:
+
+```kusto
+traces
+| where message contains "engangskode"
+| order by timestamp desc
+exceptions
+| order by timestamp desc
+```
+
+Det er `exceptions` som er interessant her: feiler ACS-kallet, logger API-et
+det med `console.error("Klarte ikke sende engangskode:", e)`, og selve
+årsaken fra Azure står i unntaket.

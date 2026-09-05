@@ -6,6 +6,7 @@
  */
 import "./funksjoner/auth.js";
 import "./funksjoner/felter.js";
+import "./funksjoner/helse.js";
 import "./funksjoner/indeks.js";
 import "./funksjoner/aar.js";
 import "./funksjoner/media.js";
