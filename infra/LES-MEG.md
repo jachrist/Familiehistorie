@@ -85,6 +85,30 @@ web-versjonene og videoen appen faktisk serverer — og Archive-nivået må
 rehydreres i timevis før det kan leses. Å skille dem i to containere gjør at en
 feilkonfigurert regel ikke kan ramme det som vises.
 
+## Utrulling når appen ble opprettet frakoblet
+
+Ble `opprett.sh` kjørt uten `GITHUB_TOKEN`, står Static Web App-en med
+«Waiting for deployment», og **portalen har ingen «Deployment»-fane** å koble
+repoet fra — den fanen finnes bare for apper Azure selv koblet til GitHub.
+
+Repoet har derfor `.github/workflows/azure-static-web-apps.yml`. Den mangler
+bare nøkkelen:
+
+1. I portalen, på Static Web App-en: **Manage deployment token** øverst. Kopier
+   verdien.
+2. I GitHub: **Settings → Secrets and variables → Actions → New repository
+   secret**. Navn `AZURE_STATIC_WEB_APPS_API_TOKEN`, verdien fra punkt 1.
+3. Kjør arbeidsflyten: **Actions → Bygg og rull ut → Run workflow**, eller bare
+   push noe til grenen.
+
+Etter første vellykkede kjøring viser portalen adressen som levende.
+
+**Hvor `staticwebapp.config.json` skal ligge.** Den ligger i `app/public/`, slik
+at Vite kopierer den til `app/dist/` — altså inn i `output_location`. Azure
+leter etter filen i `app_location` eller `output_location`, ikke i rota av
+repoet. Lå den i rota, ville CSP, `X-Robots-Tag` og `navigationFallback` blitt
+ignorert i drift.
+
 ## Om `GITHUB_TOKEN`
 
 Settes den, oppretter Azure GitHub-koblingen og genererer arbeidsflyten under

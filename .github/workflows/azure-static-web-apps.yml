@@ -1,0 +1,66 @@
+# Bygger og ruller ut til Azure Static Web Apps.
+#
+# Denne filen ble skrevet for hånd fordi Static Web App-en ble opprettet uten
+# GitHub-kobling (opprett.sh uten GITHUB_TOKEN). Azure lager arbeidsflyten selv
+# når koblingen settes opp fra portalen, men en frakoblet app har ingen
+# «Deployment»-fane å gjøre det fra – da er det denne som utruller.
+#
+# Krever hemmeligheten AZURE_STATIC_WEB_APPS_API_TOKEN i repoet. Den hentes fra
+# «Manage deployment token» øverst på Static Web App-en i portalen.
+name: Bygg og rull ut
+
+on:
+  push:
+    branches:
+      - main
+      - claude/new-project-scope-elqj9d
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  bygg_og_rull_ut:
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    name: Bygg og rull ut
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          lfs: false
+
+      # Oryx bygger app/ og api/ i utrullingssteget under. Typesjekken kjøres
+      # likevel her først: en typefeil skal stoppe utrullingen med en lesbar
+      # melding, ikke midt inne i en byggecontainer.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Typesjekk
+        run: |
+          npm ci --prefix app
+          npm ci --prefix api
+          npm run typecheck --prefix app
+          npm run typecheck --prefix api
+
+      - name: Rull ut
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: "app"
+          api_location: "api"
+          output_location: "dist"
+
+  lukk_forhandsvisning:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Lukk forhåndsvisningsmiljø
+    steps:
+      - uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: close
