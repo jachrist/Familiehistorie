@@ -61,6 +61,10 @@ app.http("helse", {
       );
     }
 
-    return json(svar, { status: svar.merknader.length === 0 ? 200 : 503 });
+    // Alltid 200, også når noe mangler. Et diagnoseendepunkt som svarer 5xx er
+    // lett å miste bak en proxy eller et CDN som bytter ut kroppen med sin
+    // egen tomme feilside – og da forsvinner nettopp svaret man kom for.
+    // Verdien står i `ok` og i merknadene i stedet.
+    return json({ ok: svar.merknader.length === 0, ...svar });
   },
 });
