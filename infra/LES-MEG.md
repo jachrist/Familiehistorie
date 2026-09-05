@@ -36,8 +36,14 @@ Da slipper du å installere Azure CLI på maskinen i det hele tatt.
 ```bash
 git clone -b claude/new-project-scope-elqj9d https://github.com/jachrist/Familiehistorie.git
 cd Familiehistorie
+npm install                 # seed-skriptet trenger @azure/storage-blob
 ./infra/opprett.sh
 ```
+
+`npm install` i rota er nok. Du trenger **ikke** `npm run installer` her — den
+installerer avhengighetene for `app/` og `api/`, som bare brukes til å kjøre
+nettstedet lokalt. Cloud Shell har dessuten Node 24, som `api/` med vilje ikke
+godtar; det gir advarsler du ikke trenger å bry deg om så lenge du bare seeder.
 
 **WSL** virker også, hvis du har det.
 

@@ -222,6 +222,7 @@ der `az` allerede er installert og innlogget:
 
 ```bash
 az login                 # ikke nødvendig i Cloud Shell
+npm install              # seed-skriptet trenger @azure/storage-blob
 ./infra/opprett.sh
 npm run seed:sky -- --redaktoer=deg@eksempel.no
 ```

@@ -30,9 +30,16 @@ const tilkobling = az(
 
 console.log(`Skriver til lagringskontoen ${LAGERNAVN} i ${RESSURSGRUPPE}.\n`);
 
+// `stdio: inherit` gjør at seed.mjs kan spørre om redaktøradressen. Feiler den,
+// har den allerede skrevet en forklaring – da er et stakkspor herfra bare støy.
+
 // Argumentene sendes videre, så `npm run seed:sky -- --redaktoer=…` virker.
-kjor(
-  process.execPath,
-  [fileURLToPath(new URL("./seed.mjs", import.meta.url)), ...process.argv.slice(2)],
-  { stdio: "inherit", env: { ...process.env, LAGER_TILKOBLING: tilkobling } }
-);
+try {
+  kjor(
+    process.execPath,
+    [fileURLToPath(new URL("./seed.mjs", import.meta.url)), ...process.argv.slice(2)],
+    { stdio: "inherit", env: { ...process.env, LAGER_TILKOBLING: tilkobling } }
+  );
+} catch {
+  process.exit(1);
+}

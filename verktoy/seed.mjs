@@ -8,7 +8,19 @@
  * tynt før 1950, tettere etterpå, slik at tiårsgrupperingen på forsiden får
  * noe å gruppere.
  */
-import { BlobServiceClient } from "@azure/storage-blob";
+// Dynamisk import, ikke static: en fersk klone uten `npm install` skal få en
+// setning som sier hva som mangler, ikke et stakkspor fra modullasteren.
+let BlobServiceClient;
+try {
+  ({ BlobServiceClient } = await import("@azure/storage-blob"));
+} catch (e) {
+  if (e?.code !== "ERR_MODULE_NOT_FOUND") throw e;
+  console.error(
+    "\n✖ Avhengighetene er ikke installert.\n" +
+      "  Kjør `npm install` i rota av repoet først.\n"
+  );
+  process.exit(1);
+}
 
 const TILKOBLING = process.env.LAGER_TILKOBLING ?? "UseDevelopmentStorage=true";
 const tjeneste = BlobServiceClient.fromConnectionString(TILKOBLING);
