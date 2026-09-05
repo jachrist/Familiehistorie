@@ -172,7 +172,8 @@ ene, får du en tilkoblingsstreng som ikke kan sende fra noe domene.
 2. Under den: **Provision domains → Add domain**. Et **Azure-håndtert** domene
    er ferdig med én gang og krever ingen DNS — bruk det for å bevise at
    innloggingen virker. Avsenderadressen blir da noe i retning av
-   `DoNotReply@abc123.azurecomm.net`, og den havner lett i søppelpost. Et eget,
+   `DoNotReply@8e3d2f1a-….azurecomm.net` — merk at det er en **GUID**, ikke et
+   lesbart navn — og den havner lett i søppelpost. Et eget,
    verifisert domene (f.eks. `post.dittdomene.no`) er det som virker i lengden,
    men krever TXT-, SPF- og DKIM-oppføringer og et døgns venting.
 3. Opprett en **Communication Service** i samme ressursgruppe.
@@ -183,7 +184,7 @@ ene, får du en tilkoblingsstreng som ikke kan sende fra noe domene.
 ```bash
 az staticwebapp appsettings set -n famhist-web -g rg-familiehistorie \
   --setting-names ACS_TILKOBLING="endpoint=https://…;accesskey=…" \
-                  EPOST_AVSENDER="ikke-svar@dittdomene.no"
+                  EPOST_AVSENDER="DoNotReply@ERSTATT-MEG.azurecomm.net"
 ```
 
 Kontroller at de kom inn:
@@ -227,7 +228,10 @@ Sier den at alt er på plass, men koden likevel uteblir, er rekkefølgen:
    står der, ikke hvem. Er den 1, og du prøver en annen adresse enn den du
    seedet med, kommer det ingen kode — det er meningen.
 3. **Er `EPOST_AVSENDER` skrevet nøyaktig** slik den står under domenets
-   *MailFrom addresses*? Den er ofte `DoNotReply@<guid>.azurecomm.net`.
+   *MailFrom addresses*? Den er ofte `DoNotReply@<en-guid>.azurecomm.net` — en
+   faktisk GUID, ikke et navn. `/api/helse` viser domenedelen, så en verdi som
+   ser oppdiktet ut avslører seg der. Merk at `epostOppsett: true` bare betyr at
+   variablene er satt, ikke at adressen finnes.
 4. **Er domenet koblet til Communication Service-ressursen?** Er det ikke det,
    feiler utsendingen med `DomainNotLinked`, og det ser du bare i loggen.
 
@@ -242,6 +246,9 @@ Står det en versjon der som ikke støttes, **melder utrullingen «Succeeded»
 likevel** — men funksjonsverten starter ikke, og alle kall til `/api/*` svarer
 tomt. Symptomet er nettopp et tomt svar uten statuskode å ta tak i, og det
 peker ingen steder av seg selv.
+
+Dette er ikke teori: med `node:22` svarte alle endepunktene tomt, `/api/ping`
+inkludert. Med `node:20`, uten andre endringer, svarte de normalt.
 
 Bygget skjer fortsatt med Node 22 (`engines` i `api/package.json`). Det er
 uproblematisk: TypeScript-utdataen er ES2023, som Node 20 kjører.
