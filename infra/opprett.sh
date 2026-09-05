@@ -71,10 +71,25 @@ TILKOBLING=$(az storage account show-connection-string \
   --name "$LAGERNAVN" --resource-group "$RESSURSGRUPPE" \
   --query connectionString -o tsv)
 
+# Signeringsnøkkelen for sesjonstokenet lages her og settes én gang. Byttes den
+# senere, blir alle utestående sesjoner ugyldige – det er en gyldig nødbrems,
+# men ikke noe som skal skje ved hver kjøring. Derfor gjenbrukes den som
+# allerede står der.
+HEMMELIGHET=$(az staticwebapp appsettings list \
+  --name "$SWA_NAVN" --resource-group "$RESSURSGRUPPE" \
+  --query "properties.SESJON_HEMMELIGHET" -o tsv 2>/dev/null || true)
+
+if [ -z "$HEMMELIGHET" ] || [ "$HEMMELIGHET" = "null" ]; then
+  HEMMELIGHET=$(node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))")
+  echo "  ny SESJON_HEMMELIGHET generert"
+else
+  echo "  beholder eksisterende SESJON_HEMMELIGHET"
+fi
+
 az staticwebapp appsettings set \
   --name "$SWA_NAVN" \
   --resource-group "$RESSURSGRUPPE" \
-  --setting-names "LAGER_TILKOBLING=$TILKOBLING" \
+  --setting-names "LAGER_TILKOBLING=$TILKOBLING" "SESJON_HEMMELIGHET=$HEMMELIGHET" \
   --output none
 
 URL=$(az staticwebapp show --name "$SWA_NAVN" --resource-group "$RESSURSGRUPPE" \
@@ -98,15 +113,30 @@ Ferdig.
   Static Web App  $SWA_NAVN
   Adresse         https://$URL
 
+Satt automatisk
+  LAGER_TILKOBLING    tilkoblingsstreng til $LAGERNAVN
+  SESJON_HEMMELIGHET  signerer sesjonstokenet
+
 Neste steg
-  1. Legg felter.json inn i innhold-containeren:
-       npm run seed:sky
-  2. Push til $GREN, så bygger og utruller GitHub Actions.
-  3. Legger dere på et eget domene senere, må det inn i CORS-reglene:
+  1. Legg innhold og tilgangsliste i innhold-containeren. Adressen du oppgir
+     blir eneste redaktør:
+       npm run seed:sky -- --redaktoer=deg@eksempel.no
+
+  2. Sett opp e-post. Uten dette kommer ingen engangskoder fram, og
+     nettstedet kan ikke logges inn i:
+       az extension add --name communication
+       az communication email create -g $RESSURSGRUPPE -n $PREFIKS-epost -l global --data-location europe
+       # Legg til et domene (Azure-håndtert går uten DNS, men havner lett i
+       # søppelpost — eget, verifisert domene er det som virker i lengden),
+       # koble det til en Communication Services-ressurs, og sett så:
+       az staticwebapp appsettings set -n $SWA_NAVN -g $RESSURSGRUPPE \\
+         --setting-names ACS_TILKOBLING="<tilkoblingsstreng>" \\
+                         EPOST_AVSENDER="ikke-svar@<domenet>"
+
+  3. Push til $GREN, så bygger og utruller GitHub Actions.
+
+  4. Legger dere på et eget domene senere, må det inn i CORS-reglene:
        az deployment group create -g $RESSURSGRUPPE --template-file infra/main.bicep \\
          --parameters prefiks=$PREFIKS tillatteOpphav='["https://$URL","https://eget.domene"]' 
-
-⚠ Nettstedet har ingen innlogging før trinn 9. Ikke last opp ekte
-  familiebilder før den er på plass.
 
 OPPSUMMERING

@@ -109,6 +109,43 @@ async function skriv(container, sti, verdi) {
 }
 
 /**
+ * Adressen kan komme fra kommandolinjen, fra miljøet, eller ved å bli spurt om.
+ *
+ * Grunnen til at den kan tastes inn: `REDAKTOER_EPOST=… npm run seed` er
+ * bash-syntaks som ikke virker i PowerShell, og en oppskrift som feiler på
+ * halvparten av maskinene er ingen oppskrift.
+ */
+async function finnRedaktoerepost() {
+  const fraArgument = process.argv
+    .slice(2)
+    .find((a) => a.startsWith("--redaktoer="))
+    ?.slice("--redaktoer=".length);
+
+  const kjent = (fraArgument ?? process.env.REDAKTOER_EPOST)?.trim().toLowerCase();
+  if (kjent) return kjent;
+
+  if (!process.stdin.isTTY) {
+    console.error(
+      "\n✖ tilgang.json mangler, og ingen redaktøradresse er oppgitt.\n" +
+        "  Uten en adresse på listen kan ingen logge inn. Kjør:\n\n" +
+        "    npm run seed -- --redaktoer=deg@eksempel.no\n"
+    );
+    process.exit(1);
+  }
+
+  const { createInterface } = await import("node:readline/promises");
+  const linje = createInterface({ input: process.stdin, output: process.stdout });
+  const svar = (await linje.question("\nHvilken e-postadresse skal være redaktør? ")).trim();
+  linje.close();
+
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(svar)) {
+    console.error("✖ Det ser ikke ut som en e-postadresse.");
+    process.exit(1);
+  }
+  return svar.toLowerCase();
+}
+
+/**
  * Tilgangslisten er den ene filen som ikke skal overskrives. Den inneholder
  * ekte adresser så snart nettstedet er i bruk, og en seed som nullstilte den
  * ville låst familien ute.
@@ -120,16 +157,7 @@ async function seedTilgang() {
     return;
   }
 
-  const epost = process.env.REDAKTOER_EPOST?.trim().toLowerCase();
-  if (!epost) {
-    console.error(
-      "\n✖ tilgang.json mangler, og REDAKTOER_EPOST er ikke satt.\n" +
-        "  Uten en adresse på listen kan ingen logge inn. Kjør f.eks.:\n\n" +
-        "    REDAKTOER_EPOST=deg@eksempel.no npm run seed\n" +
-        "    $env:REDAKTOER_EPOST='deg@eksempel.no'; npm run seed    (PowerShell)\n"
-    );
-    process.exit(1);
-  }
+  const epost = await finnRedaktoerepost();
 
   await skriv("innhold", "tilgang.json", {
     personer: [

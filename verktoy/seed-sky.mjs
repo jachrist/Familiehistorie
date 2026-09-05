@@ -30,7 +30,9 @@ const tilkobling = az(
 
 console.log(`Skriver til lagringskontoen ${LAGERNAVN} i ${RESSURSGRUPPE}.\n`);
 
-kjor(process.execPath, [fileURLToPath(new URL("./seed.mjs", import.meta.url))], {
-  stdio: "inherit",
-  env: { ...process.env, LAGER_TILKOBLING: tilkobling },
-});
+// Argumentene sendes videre, så `npm run seed:sky -- --redaktoer=…` virker.
+kjor(
+  process.execPath,
+  [fileURLToPath(new URL("./seed.mjs", import.meta.url)), ...process.argv.slice(2)],
+  { stdio: "inherit", env: { ...process.env, LAGER_TILKOBLING: tilkobling } }
+);

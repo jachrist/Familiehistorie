@@ -216,34 +216,24 @@ Den rydder både før og etter seg, men skal ikke kjøres mot ekte data.
 
 Se [infra/LES-MEG.md](infra/LES-MEG.md). Kort:
 
+**`opprett.sh` er bash og kan ikke kjøres fra PowerShell.** Bruk Git Bash (som
+følger med Git for Windows) eller [Azure Cloud Shell](https://shell.azure.com),
+der `az` allerede er installert og innlogget:
+
 ```bash
-az login
+az login                 # ikke nødvendig i Cloud Shell
 ./infra/opprett.sh
-REDAKTOER_EPOST=deg@eksempel.no npm run seed:sky
+npm run seed:sky -- --redaktoer=deg@eksempel.no
 ```
 
-Tre appinnstillinger må settes på Static Web App-en før innloggingen virker i
-drift:
+Skriptet setter `LAGER_TILKOBLING` og `SESJON_HEMMELIGHET` på Static Web App-en
+selv. **E-post er det eneste som må settes opp for hånd** — se
+[infra/LES-MEG.md](infra/LES-MEG.md). Uten den kommer ingen engangskoder fram,
+og da kan ingen logge inn i drift.
 
-| Innstilling | Verdi |
-|---|---|
-| `SESJON_HEMMELIGHET` | Minst 32 tilfeldige tegn. Ikke den samme som lokalt |
-| `ACS_TILKOBLING` | Tilkoblingsstreng til Azure Communication Services |
-| `EPOST_AVSENDER` | Avsenderadressen, f.eks. `ikke-svar@ditt-domene.no` |
-
-```bash
-az staticwebapp appsettings set --name <swa-navn> --setting-names \
-  SESJON_HEMMELIGHET="$(openssl rand -base64 32)" \
-  ACS_TILKOBLING="..." EPOST_AVSENDER="ikke-svar@ditt-domene.no"
-```
-
-`MILJO` settes ikke i Azure — standarden er drift, og da står `Secure` på
-sesjonskapselen.
-
-**Avsenderdomenet bør verifiseres.** Den Azure-genererte avsenderadressen havner
-ofte i søppelpost, og en engangskode som ikke kommer fram er en innlogging som
-ikke virker. DNS-verifiseringen tar gjerne et døgn, så den er verdt å starte før
-resten.
+Alt dette gjøres *etter* at ressursene finnes. Lokalt setter du ingenting selv:
+`npm run forbered` har allerede skrevet `SESJON_HEMMELIGHET` og `MILJO=lokalt`
+inn i `api/local.settings.json`.
 
 ## Hva som virker nå
 

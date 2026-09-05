@@ -1,10 +1,13 @@
 /**
  * Utsending av engangskoder.
  *
- * Bruker Azure Communication Services når det er satt opp. Er det ikke det –
- * altså lokalt – skrives koden i konsollen i stedet, så innloggingen kan prøves
- * uten e-postoppsett. Koden logges *bare* i det tilfellet; i drift ville en kode
- * i loggen vært en lekkasje.
+ * Bruker Azure Communication Services når det er satt opp. Er det ikke det, og
+ * vi kjører lokalt, skrives koden i konsollen i stedet, så innloggingen kan
+ * prøves uten e-postoppsett.
+ *
+ * I drift skjer det motsatte: mangler oppsettet, kastes en feil. Å logge koden
+ * der ville lagt en gyldig legitimasjon i Application Insights, og en stille
+ * «ingen e-post ble sendt» er dessuten vanskeligere å oppdage enn en feil.
  *
  * Avsenderdomenet bør være verifisert. Den Azure-genererte avsenderadressen
  * havner ofte i søppelpost, og en engangskode som ikke kommer fram er en
@@ -36,6 +39,11 @@ export async function sendKode(epost: string, navn: string, kode: string): Promi
   const tjeneste = epostklient();
 
   if (!tjeneste || !avsender) {
+    if ((process.env.MILJO ?? "drift").toLowerCase() !== "lokalt") {
+      throw new Error(
+        "ACS_TILKOBLING og EPOST_AVSENDER er ikke satt. Ingen engangskoder kan sendes."
+      );
+    }
     console.log(
       `\n  [lokal innlogging] engangskode for ${epost}: ${kode}` +
         `\n  (ACS_TILKOBLING/EPOST_AVSENDER er ikke satt – koden sendes ikke på e-post)\n`

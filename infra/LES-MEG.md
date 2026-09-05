@@ -17,6 +17,30 @@ Har du repoet fra før, holder det med `git pull`.
 **Forutsetninger:** [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli),
 Node 22, og `az login` kjørt.
 
+## Hvilket skall
+
+`opprett.sh` er et bash-skript. **PowerShell kan ikke kjøre det** — du får
+«The term './infra/opprett.sh' is not recognized». Velg én av disse:
+
+**Git Bash** (enklest på Windows, følger med Git for Windows som du allerede
+har). Høyreklikk i repomappa → «Open Git Bash here», eller:
+
+```powershell
+& "C:\Program Files\Git\bin\bash.exe" infra/opprett.sh
+```
+
+**Azure Cloud Shell** ([shell.azure.com](https://shell.azure.com)) er verdt å
+vite om: bash i nettleseren, med `az` ferdig installert og allerede innlogget.
+Da slipper du å installere Azure CLI på maskinen i det hele tatt.
+
+```bash
+git clone -b claude/new-project-scope-elqj9d https://github.com/jachrist/Familiehistorie.git
+cd Familiehistorie
+./infra/opprett.sh
+```
+
+**WSL** virker også, hvis du har det.
+
 ## Kjøring
 
 ```bash
@@ -87,9 +111,34 @@ over senere er å bytte én appinnstilling og gi identiteten rollene
 ## Etter oppsettet
 
 ```bash
-npm run seed:sky      # legger felter.json i innhold-containeren
+# Adressen du oppgir blir eneste redaktør. Virker likt i PowerShell og bash.
+npm run seed:sky -- --redaktoer=deg@eksempel.no
 ```
 
-> **Nettstedet har ingen innlogging før trinn 9.** Alt som lastes opp før den er
-> på plass, er lesbart for enhver som finner adressen. Ikke legg inn ekte
-> familiebilder ennå.
+Utelater du `--redaktoer`, spør skriptet.
+
+### Det ene som gjenstår: e-post
+
+Skriptet setter `LAGER_TILKOBLING` og `SESJON_HEMMELIGHET` selv. **E-post må
+settes opp for hånd**, fordi et avsenderdomene ikke kan opprettes ferdig av et
+skript — det krever DNS-oppføringer og en verifisering som tar tid.
+
+Uten `ACS_TILKOBLING` og `EPOST_AVSENDER` kommer ingen engangskoder fram, og da
+kan ingen logge inn i drift. API-et feiler høylytt i loggen i stedet for å late
+som om e-posten gikk.
+
+1. Opprett en Email Communication Service og en Communication Services-ressurs
+   (portalen er greiest første gang — søk etter «Email Communication Service»).
+2. Legg til et domene. Et **Azure-håndtert** domene virker uten DNS-arbeid og er
+   fint for å teste at innloggingen funker, men havner lett i søppelpost. Eget,
+   verifisert domene er det som virker i lengden.
+3. Koble domenet til Communication Services-ressursen, og sett innstillingene:
+
+```bash
+az staticwebapp appsettings set -n famhist-web -g rg-familiehistorie \
+  --setting-names ACS_TILKOBLING="endpoint=https://…;accesskey=…" \
+                  EPOST_AVSENDER="ikke-svar@dittdomene.no"
+```
+
+`MILJO` settes ikke i Azure. Standarden er drift, og da står `Secure` på
+sesjonskapselen.
