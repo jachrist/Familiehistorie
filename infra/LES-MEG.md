@@ -231,6 +231,21 @@ Sier den at alt er på plass, men koden likevel uteblir, er rekkefølgen:
 4. **Er domenet koblet til Communication Service-ressursen?** Er det ikke det,
    feiler utsendingen med `DomainNotLinked`, og det ser du bare i loggen.
 
+### Om `apiRuntime`
+
+`app/public/staticwebapp.config.json` setter `"platform": { "apiRuntime":
+"node:20" }`. Verdien er ikke fritt valgt: Static Web Apps har en egen liste
+over hvilke Node-versjoner *managed functions* kan kjøre, og den er kortere enn
+listen over versjoner Oryx kan bygge med.
+
+Står det en versjon der som ikke støttes, **melder utrullingen «Succeeded»
+likevel** — men funksjonsverten starter ikke, og alle kall til `/api/*` svarer
+tomt. Symptomet er nettopp et tomt svar uten statuskode å ta tak i, og det
+peker ingen steder av seg selv.
+
+Bygget skjer fortsatt med Node 22 (`engines` i `api/package.json`). Det er
+uproblematisk: TypeScript-utdataen er ES2023, som Node 20 kjører.
+
 ### Loggen
 
 **Static Web Apps har ingen logg før Application Insights er slått på.** Det er
