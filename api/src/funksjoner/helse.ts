@@ -15,6 +15,20 @@ import { json } from "../svar.js";
  * i familien. Det er riktig, men gjør at et oppsett som mangler ser nøyaktig ut
  * som et vellykket kall. Da må svaret finnes et annet sted.
  */
+/**
+ * `jan.christiansen@jcconsulting.no` → `ja***@jcconsulting.no`.
+ *
+ * Nok til at man kjenner igjen sin egen adresse, for lite til at noen kan
+ * gjette seg til andres. Det er en bevisst oppmyking av regelen om at
+ * endepunktene ikke røper hvem som står på listen: uten den kan en som er
+ * låst ute ikke se om det er adressen eller noe annet som er feil, og da må
+ * svaret hentes fra en logg som kan ligge timer etter.
+ */
+function masker(epost: string): string {
+  const [lokal = "", domene = ""] = epost.split("@");
+  return `${lokal.slice(0, 2)}***@${domene}`;
+}
+
 app.http("helse", {
   methods: ["GET"],
   route: "helse",
@@ -25,6 +39,7 @@ app.http("helse", {
       tilgangsliste: false,
       antallPersoner: 0,
       antallRedaktoerer: 0,
+      adresser: [] as string[],
       epostOppsett: epostErSattOpp(),
       avsenderdomene: process.env.EPOST_AVSENDER?.split("@")[1] ?? null,
       sesjonsnokkel: (process.env.SESJON_HEMMELIGHET ?? "").trim().length >= 32,
@@ -41,6 +56,7 @@ app.http("helse", {
         svar.antallRedaktoerer = lest.verdi.personer.filter((p) =>
           p.roller.includes("redaktoer")
         ).length;
+        svar.adresser = lest.verdi.personer.map((p) => masker(p.epost));
       }
     } catch (e) {
       svar.merknader.push(

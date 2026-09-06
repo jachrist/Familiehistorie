@@ -153,7 +153,13 @@ Den som seedet listen er eneste som kan logge inn. Skriver du inn en annen
 adresse, svarer nettstedet like blidt som ellers — endepunktet skal ikke røpe
 hvem som står der — og ingen kode kommer.
 
-Les listen slik når du er i tvil:
+`/api/helse` viser adressene maskert — `ja***@jcconsulting.no` — som er nok til
+å kjenne igjen sin egen og for lite til å gjette andres. Det er en bevisst
+oppmyking av regelen om at endepunktene ikke røper hvem som står på listen:
+uten den kan en som er låst ute ikke se om det er adressen eller noe annet som
+er galt, og da må svaret hentes fra en logg som kan ligge timer etter.
+
+Vil du se hele listen, les bloben:
 
 ```bash
 KEY=$(az storage account keys list -g rg-familiehistorie -n famhistlager --query "[0].value" -o tsv)
