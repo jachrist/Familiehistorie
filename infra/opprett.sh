@@ -86,10 +86,16 @@ else
   echo "  beholder eksisterende SESJON_HEMMELIGHET"
 fi
 
+# AzureWebJobsStorage er Functions-vertens egen husholdning, ikke vår.
+# Mangler den, melder helsesjekken seg syk hvert 30. sekund og verten starter
+# på nytt i en løkke. HTTP-utløsere svarer fortsatt mellom omstartene, så
+# symptomet er ikke at alt er nede – det er at kall som tar litt tid, blir
+# avbrutt midt i. Samme tilkoblingsstreng som LAGER_TILKOBLING.
 az staticwebapp appsettings set \
   --name "$SWA_NAVN" \
   --resource-group "$RESSURSGRUPPE" \
-  --setting-names "LAGER_TILKOBLING=$TILKOBLING" "SESJON_HEMMELIGHET=$HEMMELIGHET" \
+  --setting-names "LAGER_TILKOBLING=$TILKOBLING" "AzureWebJobsStorage=$TILKOBLING" \
+                  "SESJON_HEMMELIGHET=$HEMMELIGHET" \
   --output none
 
 URL=$(az staticwebapp show --name "$SWA_NAVN" --resource-group "$RESSURSGRUPPE" \
@@ -115,6 +121,7 @@ Ferdig.
 
 Satt automatisk
   LAGER_TILKOBLING    tilkoblingsstreng til $LAGERNAVN
+  AzureWebJobsStorage samme streng – Functions-vertens egen husholdning
   SESJON_HEMMELIGHET  signerer sesjonstokenet
 
 Neste steg
