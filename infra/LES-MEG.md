@@ -225,6 +225,41 @@ endepunktet røpet hvem som står på tilgangslisten. Sjekk i denne rekkefølgen
    er nådd», eller «engangskode sendt» — uten adressen og uten koden. Er
    Resends logg tom, sier denne hvorfor kallet aldri ble gjort.
 
+### «Unable to create client for AzureWebJobsStorage»
+
+Denne står i `traces` hvert 30. sekund, sammen med `DrainMode mode enabled` og
+`Calling StopAsync on the registered listeners`:
+
+```
+Process reporting unhealthy: Unhealthy. Health check entries are
+  {"azure.functions.webjobs.storage":{"status":"Unhealthy",
+   "description":"Unable to create client for AzureWebJobsStorage"}}
+```
+
+**Det er støy, ikke en feil.** Managed functions på Static Web Apps kjører uten
+`AzureWebJobsStorage` med vilje, og helsesjekken spør etter den likevel.
+Innstillingen kan heller ikke settes — plattformen avviser navnet:
+
+```
+AppSetting with name(s) 'AzureWebJobsStorage' are not allowed.
+```
+
+At verten starter på nytt jevnlig er normalt på gratisplanen, som skalerer til
+null mellom kall. Bekreft heller at det virker, i stedet for å jage
+helsemeldingen: i samme logg skal det stå `Host started`, `17 functions loaded`,
+og `Executed 'Functions.ping' (Succeeded)`. Gjør det, er verten frisk nok.
+
+Filtrer bort støyen når du leter etter noe ekte:
+
+```kusto
+traces
+| where timestamp > ago(1h)
+| where message !contains "Health check" and message !contains "StopAsync"
+      and message !contains "DrainMode"
+| project timestamp, message
+| order by timestamp desc
+```
+
 ### Diagnosesiden
 
 ```
