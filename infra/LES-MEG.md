@@ -142,10 +142,43 @@ over senere er å bytte én appinnstilling og gi identiteten rollene
 
 ```bash
 # Adressen du oppgir blir eneste redaktør. Virker likt i PowerShell og bash.
-npm run seed:sky -- --redaktoer=deg@eksempel.no
+npm run seed:sky -- --redaktoer=din.adresse@domenet.no
 ```
 
 Utelater du `--redaktoer`, spør skriptet.
+
+### Hvem står på tilgangslisten?
+
+Den som seedet listen er eneste som kan logge inn. Skriver du inn en annen
+adresse, svarer nettstedet like blidt som ellers — endepunktet skal ikke røpe
+hvem som står der — og ingen kode kommer.
+
+Les listen slik når du er i tvil:
+
+```bash
+KEY=$(az storage account keys list -g rg-familiehistorie -n famhistlager --query "[0].value" -o tsv)
+az storage blob download --account-name famhistlager --account-key "$KEY" \
+  -c innhold -n tilgang.json --file /dev/stdout
+```
+
+Og rett den om nødvendig:
+
+```bash
+cat > tilgang.json <<'JSON'
+{
+  "personer": [
+    { "epost": "din.adresse@domenet.no", "navn": "Ditt Navn", "roller": ["familie", "redaktoer"] }
+  ]
+}
+JSON
+
+az storage blob upload --account-name famhistlager --account-key "$KEY" \
+  -c innhold -n tilgang.json --file tilgang.json --overwrite \
+  --content-type "application/json"
+```
+
+Listen bufres i 60 sekunder i API-et, så gi det et minutt. Etterpå redigeres den
+fra `/tilgang` i appen, som er meningen — dette er bare veien inn første gang.
 
 ### Det ene som gjenstår: e-post
 

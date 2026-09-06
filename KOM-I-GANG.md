@@ -95,13 +95,13 @@ Deretter, i to skall:
 npm run dev          # skall 1: Azurite, bygger API-et, starter SWA CLI
 
 # skall 2, første gang. Adressen blir eneste redaktør – bruk din egen.
-REDAKTOER_EPOST=deg@eksempel.no npm run seed
+REDAKTOER_EPOST=din.adresse@domenet.no npm run seed
 ```
 
 I PowerShell settes miljøvariabelen slik:
 
 ```powershell
-$env:REDAKTOER_EPOST = "deg@eksempel.no"; npm run seed
+$env:REDAKTOER_EPOST = "din.adresse@domenet.no"; npm run seed
 ```
 
 Åpne <http://localhost:4280>. Eksempelårene har den formen materialet deres
@@ -225,7 +225,7 @@ der `az` allerede er installert og innlogget:
 az login                 # ikke nødvendig i Cloud Shell
 npm install              # seed-skriptet trenger @azure/storage-blob
 ./infra/opprett.sh
-npm run seed:sky -- --redaktoer=deg@eksempel.no
+npm run seed:sky -- --redaktoer=din.adresse@domenet.no
 ```
 
 Skriptet setter `LAGER_TILKOBLING` og `SESJON_HEMMELIGHET` på Static Web App-en

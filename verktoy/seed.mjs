@@ -134,13 +134,13 @@ async function finnRedaktoerepost() {
     ?.slice("--redaktoer=".length);
 
   const kjent = (fraArgument ?? process.env.REDAKTOER_EPOST)?.trim().toLowerCase();
-  if (kjent) return kjent;
+  if (kjent) return sjekkEkte(kjent);
 
   if (!process.stdin.isTTY) {
     console.error(
       "\n✖ tilgang.json mangler, og ingen redaktøradresse er oppgitt.\n" +
         "  Uten en adresse på listen kan ingen logge inn. Kjør:\n\n" +
-        "    npm run seed -- --redaktoer=deg@eksempel.no\n"
+        "    npm run seed -- --redaktoer=din.adresse@domenet.no\n"
     );
     process.exit(1);
   }
@@ -154,7 +154,30 @@ async function finnRedaktoerepost() {
     console.error("✖ Det ser ikke ut som en e-postadresse.");
     process.exit(1);
   }
-  return svar.toLowerCase();
+  return sjekkEkte(svar.toLowerCase());
+}
+
+/**
+ * Avviser plassholdere fra dokumentasjonen.
+ *
+ * `deg@eksempel.no` ble limt inn som den var, og resultatet var en
+ * tilgangsliste med én person som ikke fantes – der symptomet var at
+ * innloggingen tidde stille, siden endepunktet med vilje ikke røper hvem som
+ * står på listen. Et eksempel som ser ekte nok ut til å bli brukt, er en felle
+ * dokumentasjonen selv har satt opp.
+ */
+function sjekkEkte(epost) {
+  const RESERVERTE = ["eksempel.no", "example.com", "example.org", "example.net", "erstatt-meg"];
+  if (RESERVERTE.some((r) => epost.includes(r))) {
+    console.error(
+      `\n✖ «${epost}» er en plassholder fra dokumentasjonen, ikke en ekte adresse.\n` +
+        "  Den som står på tilgangslisten er den eneste som kan logge inn.\n" +
+        "  Bruk din egen adresse:\n\n" +
+        "    npm run seed:sky -- --redaktoer=din.adresse@domenet.no\n"
+    );
+    process.exit(1);
+  }
+  return epost;
 }
 
 /**

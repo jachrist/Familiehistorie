@@ -22,7 +22,7 @@ npm install && npm run installer
 npm run dev         # skall 1: Azurite + API + frontend
 
 # skall 2, første gang. Adressen blir eneste redaktør – bruk din egen.
-REDAKTOER_EPOST=deg@eksempel.no npm run seed
+REDAKTOER_EPOST=din.adresse@domenet.no npm run seed
 ```
 
 Åpne <http://localhost:4280>. Innloggingskoden skrives i konsollen der API-et

@@ -120,7 +120,7 @@ Satt automatisk
 Neste steg
   1. Legg innhold og tilgangsliste i innhold-containeren. Adressen du oppgir
      blir eneste redaktør:
-       npm run seed:sky -- --redaktoer=deg@eksempel.no
+       npm run seed:sky -- --redaktoer=din.adresse@domenet.no
 
   2. Sett opp e-post. Uten dette kommer ingen engangskoder fram, og
      nettstedet kan ikke logges inn i. Nøkkel fra resend.com → API Keys:
