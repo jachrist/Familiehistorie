@@ -225,39 +225,6 @@ endepunktet røpet hvem som står på tilgangslisten. Sjekk i denne rekkefølgen
    er nådd», eller «engangskode sendt» — uten adressen og uten koden. Er
    Resends logg tom, sier denne hvorfor kallet aldri ble gjort.
 
-### Når funksjonsverten starter på nytt i løkke
-
-Symptomet i Application Insights er en `traces`-logg full av dette, hvert
-30. sekund:
-
-```
-Process reporting unhealthy: Unhealthy. Health check entries are
-  {"azure.functions.webjobs.storage":{"status":"Unhealthy",
-   "description":"Unable to create client for AzureWebJobsStorage"}}
-DrainMode mode enabled
-Calling StopAsync on the registered listeners
-```
-
-`AzureWebJobsStorage` er Functions-vertens **egen** husholdning, ikke appens
-lagring. Mangler den, melder helsesjekken seg syk og verten dreneres og
-startes på nytt i det uendelige.
-
-Det lumske er at nettstedet ikke ser nede ut: HTTP-utløsere trenger ikke den
-lagringen, så korte kall svarer normalt mellom omstartene. Det som ryker, er
-kall som tar litt tid — et `fetch` mot en e-posttjeneste rekker fint å bli
-avbrutt midt i. Da når forespørselen aldri fram, ingen feil kastes, og både
-Resends logg og `exceptions` står tomme.
-
-`opprett.sh` setter den. Er den likevel borte:
-
-```bash
-TILK=$(az storage account show-connection-string \
-  --name famhistlager -g rg-familiehistorie --query connectionString -o tsv)
-
-az staticwebapp appsettings set -n famhist-web -g rg-familiehistorie \
-  --setting-names AzureWebJobsStorage="$TILK"
-```
-
 ### Diagnosesiden
 
 ```
