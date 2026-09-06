@@ -2,6 +2,7 @@ import { app, type HttpRequest, type HttpResponseInit } from "@azure/functions";
 import { z } from "zod";
 import type { Innlogget } from "../../../delt/typer.js";
 import { sendKode } from "../epost.js";
+import { noterUtfall } from "../hendelse.js";
 import {
   KODE_LEVETID_MINUTTER,
   MAKS_BESTILLINGER_PER_TIME,
@@ -83,11 +84,15 @@ app.http("authKode", {
         // nettstedet skal kunne se *hvorfor* det ikke kom noen e-post – ellers
         // ser et tak, en ukjent adresse og en vellykket utsending helt like ut.
         console.warn("Kodebestilling: adressen står ikke på tilgangslisten.");
+        await noterUtfall("Adressen står ikke på tilgangslisten.");
         return svar;
       }
       if (!(await kanBestille(person.epost))) {
         console.warn(
           `Kodebestilling avvist: taket på ${MAKS_BESTILLINGER_PER_TIME} per adresse per time er nådd.`
+        );
+        await noterUtfall(
+          `Avvist: taket på ${MAKS_BESTILLINGER_PER_TIME} bestillinger per adresse per time er nådd.`
         );
         return svar;
       }
@@ -95,10 +100,12 @@ app.http("authKode", {
       const kode = await lagKode(person.epost);
       await sendKode(person.epost, person.navn, kode);
       console.log("Kodebestilling: engangskode sendt.");
+      await noterUtfall("Engangskode sendt.");
     } catch (e) {
       // Logges, men lekker ikke ut. Klienten skal ikke kunne skille «finnes
       // ikke» fra «noe gikk galt hos oss».
       console.error("Klarte ikke sende engangskode:", e);
+      await noterUtfall(e instanceof Error ? e.message : "Ukjent feil.");
     }
 
     return svar;

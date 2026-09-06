@@ -245,6 +245,11 @@ så du ser hvilken som mangler i stedet for å gjette.
 `/api/auth/kode` svarer alltid 202, uansett hva som gikk galt — ellers ville
 endepunktet røpet hvem som står på tilgangslisten. Sjekk i denne rekkefølgen:
 
+0. **`/api/helse` → `sisteKodebestilling`.** Her står utfallet av forrige
+   kodebestilling, i sanntid: «Engangskode sendt.», «Adressen står ikke på
+   tilgangslisten.», «Avvist: taket … er nådd.», eller feilmeldingen fra
+   Resend. Uten adresse og uten kode, så den kan leses uten innlogging. Dette
+   er første stopp — resten under er bare aktuelt hvis den ikke gir svaret.
 1. **Er taket nådd?** Maks fem kodebestillinger per adresse per time. Over det
    sendes ingenting, og svaret utad er uendret 202 — det er meningen, men det
    ser identisk ut med en vellykket utsending. Under testing er dette den

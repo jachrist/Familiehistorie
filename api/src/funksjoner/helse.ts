@@ -1,6 +1,7 @@
 import { app, type HttpResponseInit } from "@azure/functions";
 import type { Tilgangsliste } from "../../../delt/typer.js";
 import { epostErSattOpp } from "../epost.js";
+import { sisteUtfall } from "../hendelse.js";
 import { CONTAINER, STI, lesJson } from "../lager.js";
 import { json } from "../svar.js";
 
@@ -44,6 +45,9 @@ app.http("helse", {
       avsenderdomene: process.env.EPOST_AVSENDER?.split("@")[1] ?? null,
       sesjonsnokkel: (process.env.SESJON_HEMMELIGHET ?? "").trim().length >= 32,
       miljo: process.env.MILJO ?? "drift",
+      // Hva som faktisk skjedde sist noen ba om en kode. Svarer i sanntid, i
+      // motsetning til Application Insights.
+      sisteKodebestilling: await sisteUtfall(),
       merknader: [] as string[],
     };
 
