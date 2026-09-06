@@ -206,16 +206,24 @@ så du ser hvilken som mangler i stedet for å gjette.
 `/api/auth/kode` svarer alltid 202, uansett hva som gikk galt — ellers ville
 endepunktet røpet hvem som står på tilgangslisten. Sjekk i denne rekkefølgen:
 
-1. **`/api/helse`** — sier om `RESEND_NOKKEL` og `EPOST_AVSENDER` er satt, og
+1. **Er taket nådd?** Maks fem kodebestillinger per adresse per time. Over det
+   sendes ingenting, og svaret utad er uendret 202 — det er meningen, men det
+   ser identisk ut med en vellykket utsending. Under testing er dette den
+   vanligste årsaken. Vinduet er rullende fra første bestilling, så det løsner
+   av seg selv innen en time; ellers kan du prøve med en annen adresse på
+   listen.
+2. **`/api/helse`** — sier om `RESEND_NOKKEL` og `EPOST_AVSENDER` er satt, og
    viser avsenderdomenet. `epostOppsett: true` betyr bare at variablene finnes,
    ikke at nøkkelen er gyldig.
-2. **Resends egen logg** — [resend.com](https://resend.com) → **Emails**. Hver
+3. **Resends egen logg** — [resend.com](https://resend.com) → **Emails**. Hver
    utsending står der med status, og en avvist melding sier hvorfor. Det er den
    raskeste veien til svar, og grunnen til at denne leverandøren er verdt de
    par minuttene med DNS.
-3. **Søppelpost**, hvis Resend sier at meldingen ble levert.
-4. **Application Insights → `exceptions`** — API-et tar med Resends egen
-   feilmelding i unntaket, uten koden.
+4. **Søppelpost**, hvis Resend sier at meldingen ble levert.
+5. **Application Insights → `traces` og `exceptions`.** Hver kodebestilling
+   logger hvilken vei den tok — «adressen står ikke på tilgangslisten», «taket
+   er nådd», eller «engangskode sendt» — uten adressen og uten koden. Er
+   Resends logg tom, sier denne hvorfor kallet aldri ble gjort.
 
 ### Diagnosesiden
 
