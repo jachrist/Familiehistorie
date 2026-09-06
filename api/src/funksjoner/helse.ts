@@ -57,7 +57,7 @@ app.http("helse", {
     }
     if (!svar.epostOppsett) {
       svar.merknader.push(
-        "ACS_TILKOBLING og/eller EPOST_AVSENDER mangler. Ingen engangskoder kan sendes."
+        "RESEND_NOKKEL og/eller EPOST_AVSENDER mangler. Ingen engangskoder kan sendes."
       );
     }
 

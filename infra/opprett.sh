@@ -123,15 +123,13 @@ Neste steg
        npm run seed:sky -- --redaktoer=deg@eksempel.no
 
   2. Sett opp e-post. Uten dette kommer ingen engangskoder fram, og
-     nettstedet kan ikke logges inn i:
-       az extension add --name communication
-       az communication email create -g $RESSURSGRUPPE -n $PREFIKS-epost -l global --data-location europe
-       # Legg til et domene (Azure-håndtert går uten DNS, men havner lett i
-       # søppelpost — eget, verifisert domene er det som virker i lengden),
-       # koble det til en Communication Services-ressurs, og sett så:
+     nettstedet kan ikke logges inn i. Nøkkel fra resend.com → API Keys:
        az staticwebapp appsettings set -n $SWA_NAVN -g $RESSURSGRUPPE \\
-         --setting-names ACS_TILKOBLING="<tilkoblingsstreng>" \\
-                         EPOST_AVSENDER="ikke-svar@<domenet>"
+         --setting-names RESEND_NOKKEL="re_…" \\
+                         EPOST_AVSENDER="Familiehistorie <ikke-svar@dittdomene.no>"
+
+     Uten et verifisert domene i Resend kan du sende fra onboarding@resend.dev,
+     men bare til adressen kontoen er registrert på.
 
   3. Push til $GREN, så bygger og utruller GitHub Actions.
 

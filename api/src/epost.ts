@@ -1,76 +1,101 @@
 /**
- * Utsending av engangskoder.
+ * Utsending av engangskoder via Resend.
  *
- * Bruker Azure Communication Services når det er satt opp. Er det ikke det, og
- * vi kjører lokalt, skrives koden i konsollen i stedet, så innloggingen kan
- * prøves uten e-postoppsett.
+ * Ett HTTP-kall med en API-nøkkel. Ingen SDK, ingen ekstra avhengighet, ingen
+ * ressurser å opprette i Azure. Det erstatter Azure Communication Services,
+ * der to ressurser, et domene og et koblingssteg måtte stemme før noe kunne
+ * sendes – og der en melding som ikke kom fram ikke sa hvorfor.
  *
- * I drift skjer det motsatte: mangler oppsettet, kastes en feil. Å logge koden
- * der ville lagt en gyldig legitimasjon i Application Insights, og en stille
- * «ingen e-post ble sendt» er dessuten vanskeligere å oppdage enn en feil.
- *
- * Avsenderdomenet bør være verifisert. Den Azure-genererte avsenderadressen
- * havner ofte i søppelpost, og en engangskode som ikke kommer fram er en
- * innlogging som ikke virker.
+ * Lokalt, uten nøkkel, skrives koden i konsollen i stedet. I drift kastes en
+ * feil hvis oppsettet mangler: å logge koden der ville lagt gyldig legitimasjon
+ * i Application Insights, og en stille «ingen e-post ble sendt» er vanskeligere
+ * å oppdage enn en feil.
  */
-import { EmailClient } from "@azure/communication-email";
 import { KODE_LEVETID_MINUTTER } from "./kode.js";
+
+/** Overstyres bare av prøver som vil fange kallet. Ellers Resends endepunkt. */
+const RESEND_URL = process.env.RESEND_URL || "https://api.resend.com/emails";
 
 function les(navn: string): string | undefined {
   const v = process.env[navn];
   return v && v.trim() !== "" ? v : undefined;
 }
 
-let klient: EmailClient | undefined;
-
-function epostklient(): EmailClient | undefined {
-  const tilkobling = les("ACS_TILKOBLING");
-  if (!tilkobling) return undefined;
-  klient ??= new EmailClient(tilkobling);
-  return klient;
+function erLokalt(): boolean {
+  return (process.env.MILJO ?? "drift").toLowerCase() === "lokalt";
 }
 
 export function epostErSattOpp(): boolean {
-  return Boolean(les("ACS_TILKOBLING") && les("EPOST_AVSENDER"));
+  return Boolean(les("RESEND_NOKKEL") && les("EPOST_AVSENDER"));
 }
 
 export async function sendKode(epost: string, navn: string, kode: string): Promise<void> {
+  const nokkel = les("RESEND_NOKKEL");
   const avsender = les("EPOST_AVSENDER");
-  const tjeneste = epostklient();
 
-  if (!tjeneste || !avsender) {
-    if ((process.env.MILJO ?? "drift").toLowerCase() !== "lokalt") {
+  if (!nokkel || !avsender) {
+    if (!erLokalt()) {
       throw new Error(
-        "ACS_TILKOBLING og EPOST_AVSENDER er ikke satt. Ingen engangskoder kan sendes."
+        "RESEND_NOKKEL og EPOST_AVSENDER er ikke satt. Ingen engangskoder kan sendes."
       );
     }
     console.log(
       `\n  [lokal innlogging] engangskode for ${epost}: ${kode}` +
-        `\n  (ACS_TILKOBLING/EPOST_AVSENDER er ikke satt – koden sendes ikke på e-post)\n`
+        `\n  (RESEND_NOKKEL/EPOST_AVSENDER er ikke satt – koden sendes ikke på e-post)\n`
     );
     return;
   }
 
   const fornavn = navn.split(" ")[0] || "hei";
-  const tekst =
+
+  const svar = await fetch(RESEND_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${nokkel}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: avsender,
+      to: [epost],
+      subject: `Engangskode til Familiehistorie: ${kode}`,
+      text: tekstversjon(fornavn, kode),
+      html: htmlversjon(fornavn, kode),
+    }),
+  });
+
+  if (!svar.ok) {
+    // Resend svarer med JSON når noe er galt. Meldingen derfra er den eneste
+    // som sier hva som faktisk skjedde, så den tas med videre – uten koden.
+    const detalj = await svar.text().catch(() => "");
+    throw new Error(
+      `Resend avviste utsendingen (HTTP ${svar.status}): ${detalj.slice(0, 400)}`
+    );
+  }
+}
+
+/**
+ * Koden står også i emnefeltet. Det er ikke slurv: på telefon er den da
+ * synlig i varselet, og de fleste slipper å åpne meldingen i det hele tatt.
+ */
+function tekstversjon(fornavn: string, kode: string): string {
+  return (
     `Hei ${fornavn},\n\n` +
     `Engangskoden din til Familiehistorie er:\n\n    ${kode}\n\n` +
     `Den er gyldig i ${KODE_LEVETID_MINUTTER} minutter.\n\n` +
-    `Har du ikke bedt om å logge inn, kan du se bort fra denne meldingen.\n`;
+    `Har du ikke bedt om å logge inn, kan du se bort fra denne meldingen.\n`
+  );
+}
 
-  const html =
+function htmlversjon(fornavn: string, kode: string): string {
+  return (
+    `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.6;color:#101b2d">` +
     `<p>Hei ${flukt(fornavn)},</p>` +
     `<p>Engangskoden din til Familiehistorie er:</p>` +
-    `<p style="font-size:28px;letter-spacing:6px;font-weight:700">${kode}</p>` +
+    `<p style="font-size:30px;letter-spacing:8px;font-weight:700;margin:24px 0">${kode}</p>` +
     `<p>Den er gyldig i ${KODE_LEVETID_MINUTTER} minutter.</p>` +
-    `<p>Har du ikke bedt om å logge inn, kan du se bort fra denne meldingen.</p>`;
-
-  const operasjon = await tjeneste.beginSend({
-    senderAddress: avsender,
-    content: { subject: "Engangskode til Familiehistorie", plainText: tekst, html },
-    recipients: { to: [{ address: epost, displayName: navn }] },
-  });
-  await operasjon.pollUntilDone();
+    `<p style="color:#56657d;font-size:14px">Har du ikke bedt om å logge inn, kan du se bort fra denne meldingen.</p>` +
+    `</div>`
+  );
 }
 
 function flukt(tekst: string): string {

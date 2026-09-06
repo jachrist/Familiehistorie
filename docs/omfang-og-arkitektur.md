@@ -463,7 +463,7 @@ Den delen fungerer likt med OTP.
     → svarer alltid 202, uansett om adressen står der
       (ellers lekker endepunktet hvem som er i familien)
     → hvis på listen: genererer 6-sifret kode, lagrer hash + utløp + forsøksteller,
-      sender e-post via Azure Communication Services
+      sender e-post via Resend
 
 2.  POST /api/auth/verifiser     { epost, kode }
     → sjekker hash, utløp (10 min) og forsøk (maks 5, deretter forkastes koden)
@@ -753,7 +753,7 @@ oppdager tapet altfor sent.
 | Blob Storage, ~50 GB Hot | ~1 |
 | Bildeoriginaler, ~11 GB Archive | ~0,02 |
 | Table Storage (koder, rate-limiting) | ~0 |
-| Azure Communication Services, e-post | ~0 |
+| Resend, e-post (gratisnivå) | 0 |
 | Utgående trafikk (se under) | 0 |
 | Application Insights | ~0 (under gratiskvote) |
 | **Sum** | **~1 USD/mnd** |
@@ -763,12 +763,15 @@ authentication og til å komme forbi taket på 25 inviterte brukere — og med e
 OTP-innlogging finnes ingen av de to begrensningene. Gratisplanen holder uansett hvor
 mange familien blir.
 
-E-postutsending er noen titalls meldinger i måneden. Azure Communication Services
-prises per melding og per datamengde; beløpet er i praksis null, men bør slås opp i
-[prislisten](https://azure.microsoft.com/en-us/pricing/details/communication-services/)
-hvis nøyaktighet ønskes. Merk at avsenderdomenet bør **verifiseres** — den
-Azure-genererte avsenderadressen havner ofte i søppelpost, og en engangskode som ikke
-kommer fram er en innlogging som ikke virker.
+**E-post går via Resend, ikke Azure Communication Services.** ACS ble bygget først og
+forkastet: to ressurser, et domene og et koblingssteg måtte stemme, den Azure-genererte
+avsenderadressen havnet i søppelpost, og en melding som ikke kom fram sa ikke hvorfor.
+Resend er én API-nøkkel, ett HTTP-kall og en leveringslogg man kan lese. Noen titalls
+meldinger i måneden ligger godt innenfor gratisnivået.
+
+Avsenderdomenet bør **verifiseres** i Resend. Uten det kan det bare sendes til adressen
+kontoen er registrert på — nok til å prøve innloggingen, ikke nok til at familien
+kommer inn.
 
 **Om båndbredde — en presisering.** Siden media serveres direkte fra Blob og ikke gjennom
 Static Web Apps, går videotrafikken *ikke* på SWA-kvoten. Det er en fordel, for på
@@ -844,7 +847,7 @@ fase 1 dekker behovet.
 | Endepunkt glemmer `krevRolle()` | Det endepunktet er åpent for alle, og CSRF-vernet faller bort | Autorisasjon er kode, ikke konfigurasjon: felles hjelper som også håndhever `Content-Type`. Røykprøven kaller hvert endepunkt uten kapsel og krever 401 |
 | Stored XSS i rik tekst | Skript kan handle som den innloggede så lenge fanen er åpen | Sanitering server-side, streng CSP, ingen tredjepartsskript. `httpOnly`-kapselen hindrer at sesjonen kan stjeles og brukes senere, men ikke angrepet i seg selv ([§9.6](#96-xss-er-fortsatt-den-viktige-risikoen)) |
 | Engangskode brute-forces | Uvedkommende kommer inn | Maks 5 forsøk per kode, maks 5 bestillinger per adresse per time, 10 min utløp |
-| Kodene havner i søppelpost | Ingen får logget inn | Verifisert avsenderdomene, ikke den Azure-genererte adressen |
+| Kodene havner i søppelpost | Ingen får logget inn | Verifisert avsenderdomene i Resend, og Resends leveringslogg som fasit |
 | Utranskodet video lastes opp | Lagring ×80, treg opplasting og avspilling | Fast rutine med `ffmpeg`, størrelsesadvarsel i GUI, kostnadsvarsling på kontoen |
 | Data går tapt | Uerstattelig | Blob-versjonering, soft delete, ukentlig kopi ut av Azure |
 | Innhold lekker offentlig | Alvorlig og lite reverserbart | Innlogging også for lesing, private containere, kortlevde SAS |
@@ -906,7 +909,7 @@ i august 2026:
 - [Assign Static Web Apps roles with Microsoft Graph](https://learn.microsoft.com/en-us/azure/static-web-apps/assign-roles-microsoft-graph) — `rolesSource` og `getRoles`-funksjonen
 - [External ID pricing](https://learn.microsoft.com/en-us/entra/external-id/external-identities-pricing) — 50 000 MAU gratis, ingen P1-lisens per gjest
 - [Azure bandwidth pricing](https://azure.microsoft.com/en-us/pricing/details/bandwidth/) — 100 GB utgående trafikk gratis per måned
-- [Azure Communication Services pricing](https://azure.microsoft.com/en-us/pricing/details/communication-services/) — e-postutsending; konkret sats ikke gjengitt her, se prislisten
+- [Resend](https://resend.com/docs/api-reference/emails/send-email) — e-postutsending; gratisnivået dekker forbruket her med god margin
 
 Entra-tallene over er beholdt fordi de begrunner *hvorfor* OTP-mønsteret er å foretrekke
 her ([§9.1](#91-tenant--og-lisensspørsmålet-forsvinner)) — de er ikke lenger noe løsningen

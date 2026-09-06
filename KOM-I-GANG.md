@@ -114,7 +114,7 @@ din, trykk «Send kode» — og hent koden **fra konsollen der API-et kjører**:
   [lokal innlogging] engangskode for deg@eksempel.no: 493015
 ```
 
-Uten `ACS_TILKOBLING` og `EPOST_AVSENDER` sendes ingen e-post, og koden skrives
+Uten `RESEND_NOKKEL` og `EPOST_AVSENDER` sendes ingen e-post, og koden skrives
 i loggen i stedet. Det er meningen lokalt. `npm run forbered` har allerede lagt
 inn en tilfeldig `SESJON_HEMMELIGHET` og `MILJO=lokalt` i
 `api/local.settings.json`.
@@ -203,6 +203,7 @@ den dagen noen legger inn en. Derfor lages den av `npm run installer` fra
 | `npm run seed` | Legger eksempeldata i Azurite |
 | `npm run seed:sky` | Samme, men mot Azure (henter nøkkel via `az`) |
 | `npm run proev` | Røykprøve av API-et mot Azurite |
+| `npm run proev:epost` | Prøver e-postutsendingen mot en stubb, uten å sende noe |
 | `npm run build` | Bygger `api/` og `app/` |
 | `npm run typecheck` | Typesjekker begge uten å bygge |
 | `npm run sjekk` | Forhåndssjekk: Node, `func`, avhengigheter, innstillinger, porter |
@@ -228,9 +229,10 @@ npm run seed:sky -- --redaktoer=deg@eksempel.no
 ```
 
 Skriptet setter `LAGER_TILKOBLING` og `SESJON_HEMMELIGHET` på Static Web App-en
-selv. **E-post er det eneste som må settes opp for hånd** — se
-[infra/LES-MEG.md](infra/LES-MEG.md). Uten den kommer ingen engangskoder fram,
-og da kan ingen logge inn i drift.
+selv. **E-post er det eneste som må settes opp for hånd**: en API-nøkkel fra
+[Resend](https://resend.com) i `RESEND_NOKKEL`, og en avsenderadresse i
+`EPOST_AVSENDER`. Se [infra/LES-MEG.md](infra/LES-MEG.md). Uten dem kommer ingen
+engangskoder fram, og da kan ingen logge inn i drift.
 
 Alt dette gjøres *etter* at ressursene finnes. Lokalt setter du ingenting selv:
 `npm run forbered` har allerede skrevet `SESJON_HEMMELIGHET` og `MILJO=lokalt`

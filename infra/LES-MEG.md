@@ -149,49 +149,25 @@ Utelater du `--redaktoer`, spør skriptet.
 
 ### Det ene som gjenstår: e-post
 
-Skriptet setter `LAGER_TILKOBLING` og `SESJON_HEMMELIGHET` selv. **E-post må
-settes opp for hånd**, fordi et avsenderdomene ikke kan opprettes ferdig av et
-skript — det krever DNS-oppføringer og en verifisering som tar tid.
-
-Uten `ACS_TILKOBLING` og `EPOST_AVSENDER` kommer ingen engangskoder fram, og da
-kan ingen logge inn i drift. API-et feiler høylytt i loggen i stedet for å late
-som om e-posten gikk.
-
-**Det er to ressurser, ikke én.** Det er her folk går seg vill:
-
-| Ressurs | Rolle |
-|---|---|
-| **Email Communication Service** | Eier avsenderdomenet. Har ingen tilkoblingsstreng |
-| **Communication Service** | Sender e-posten. Det er *denne* som har tilkoblingsstrengen |
-
-Domenet opprettes i den første og må **kobles til** den andre. Gjør du bare det
-ene, får du en tilkoblingsstreng som ikke kan sende fra noe domene.
-
-1. Opprett en **Email Communication Service** (portalen, søk på navnet).
-   Datalokasjon Europe.
-2. Under den: **Provision domains → Add domain**. Et **Azure-håndtert** domene
-   er ferdig med én gang og krever ingen DNS — bruk det for å bevise at
-   innloggingen virker. Avsenderadressen blir da noe i retning av
-   `DoNotReply@8e3d2f1a-….azurecomm.net` — merk at det er en **GUID**, ikke et
-   lesbart navn — og den havner lett i søppelpost. Et eget,
-   verifisert domene (f.eks. `post.dittdomene.no`) er det som virker i lengden,
-   men krever TXT-, SPF- og DKIM-oppføringer og et døgns venting.
-3. Opprett en **Communication Service** i samme ressursgruppe.
-4. I den: **Email → Domains → Connect domain**, og velg domenet fra punkt 2.
-5. Hent tilkoblingsstrengen fra Communication Service → **Keys**, og sett
-   innstillingene:
+Skriptet setter `LAGER_TILKOBLING` og `SESJON_HEMMELIGHET` selv. **E-post settes
+opp for hånd**, men det er nå to appinnstillinger og ingen Azure-ressurser:
 
 ```bash
 az staticwebapp appsettings set -n famhist-web -g rg-familiehistorie \
-  --setting-names ACS_TILKOBLING="endpoint=https://…;accesskey=…" \
-                  EPOST_AVSENDER="DoNotReply@ERSTATT-MEG.azurecomm.net"
+  --setting-names RESEND_NOKKEL="re_…" \
+                  EPOST_AVSENDER="Familiehistorie <ikke-svar@dittdomene.no>"
 ```
 
-Kontroller at de kom inn:
+Nøkkelen hentes fra [resend.com](https://resend.com) → **API Keys**.
 
-```bash
-az staticwebapp appsettings list -n famhist-web -g rg-familiehistorie -o table
-```
+**Om avsenderadressen.** Resend lar deg sende fra `onboarding@resend.dev` uten
+noe oppsett, men **bare til adressen kontoen er registrert på**. Det holder til
+å bevise at innloggingen virker, og ikke lenger. Skal familien kunne logge inn,
+må et eget domene verifiseres under **Domains** — tre DNS-oppføringer, og da
+sender du fra `ikke-svar@dittdomene.no` med god leveringsevne.
+
+Formatet `Navn <adresse@domene.no>` er valgfritt, men gjør at meldingen står
+med avsendernavn i innboksen i stedet for en naken adresse.
 
 `MILJO` settes ikke i Azure. Standarden er drift, og da står `Secure` på
 sesjonskapselen.
@@ -199,59 +175,18 @@ sesjonskapselen.
 ### Når koden ikke kommer fram
 
 `/api/auth/kode` svarer alltid 202, uansett hva som gikk galt — ellers ville
-endepunktet røpet hvem som står på tilgangslisten. Riktig, men det gjør at et
-manglende oppsett ser nøyaktig ut som et vellykket kall. Derfor finnes
+endepunktet røpet hvem som står på tilgangslisten. Sjekk i denne rekkefølgen:
 
-```
-https://<adressen-din>/api/helse
-```
-
-Den svarer uten innlogging, med ja/nei for hver del av oppsettet og en
-merknadsliste — aldri med verdier, og aldri med hvem som står på listen.
-
-```json
-{
-  "lager": true,
-  "tilgangsliste": true,
-  "antallPersoner": 1,
-  "epostOppsett": false,
-  "avsenderdomene": null,
-  "sesjonsnokkel": true,
-  "merknader": ["ACS_TILKOBLING og/eller EPOST_AVSENDER mangler. …"]
-}
-```
-
-Sier den at alt er på plass, men koden likevel uteblir, er rekkefølgen:
-
-1. **Søppelpost.** Azure-håndterte avsenderdomener havner der ofte.
-2. **Står adressen på tilgangslisten?** `antallPersoner` sier hvor mange som
-   står der, ikke hvem. Er den 1, og du prøver en annen adresse enn den du
-   seedet med, kommer det ingen kode — det er meningen.
-3. **Er `EPOST_AVSENDER` skrevet nøyaktig** slik den står under domenets
-   *MailFrom addresses*? Den er ofte `DoNotReply@<en-guid>.azurecomm.net` — en
-   faktisk GUID, ikke et navn. `/api/helse` viser domenedelen, så en verdi som
-   ser oppdiktet ut avslører seg der. Merk at `epostOppsett: true` bare betyr at
-   variablene er satt, ikke at adressen finnes.
-4. **Er domenet koblet til Communication Service-ressursen?** Er det ikke det,
-   feiler utsendingen med `DomainNotLinked`, og det ser du bare i loggen.
-
-### Om `apiRuntime`
-
-`app/public/staticwebapp.config.json` setter `"platform": { "apiRuntime":
-"node:20" }`. Verdien er ikke fritt valgt: Static Web Apps har en egen liste
-over hvilke Node-versjoner *managed functions* kan kjøre, og den er kortere enn
-listen over versjoner Oryx kan bygge med.
-
-Står det en versjon der som ikke støttes, **melder utrullingen «Succeeded»
-likevel** — men funksjonsverten starter ikke, og alle kall til `/api/*` svarer
-tomt. Symptomet er nettopp et tomt svar uten statuskode å ta tak i, og det
-peker ingen steder av seg selv.
-
-Dette er ikke teori: med `node:22` svarte alle endepunktene tomt, `/api/ping`
-inkludert. Med `node:20`, uten andre endringer, svarte de normalt.
-
-Bygget skjer fortsatt med Node 22 (`engines` i `api/package.json`). Det er
-uproblematisk: TypeScript-utdataen er ES2023, som Node 20 kjører.
+1. **`/api/helse`** — sier om `RESEND_NOKKEL` og `EPOST_AVSENDER` er satt, og
+   viser avsenderdomenet. `epostOppsett: true` betyr bare at variablene finnes,
+   ikke at nøkkelen er gyldig.
+2. **Resends egen logg** — [resend.com](https://resend.com) → **Emails**. Hver
+   utsending står der med status, og en avvist melding sier hvorfor. Det er den
+   raskeste veien til svar, og grunnen til at denne leverandøren er verdt de
+   par minuttene med DNS.
+3. **Søppelpost**, hvis Resend sier at meldingen ble levert.
+4. **Application Insights → `exceptions`** — API-et tar med Resends egen
+   feilmelding i unntaket, uten koden.
 
 ### Diagnosesiden
 

@@ -12,7 +12,7 @@
     "SESJON_HEMMELIGHET": "",
 
     "_kommentar_epost": "Uten disse skrives engangskoden i konsollen i stedet for å sendes på e-post. Det er meningen lokalt.",
-    "ACS_TILKOBLING": "",
+    "RESEND_NOKKEL": "",
     "EPOST_AVSENDER": ""
   }
 }
