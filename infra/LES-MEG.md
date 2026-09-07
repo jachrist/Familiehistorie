@@ -211,6 +211,31 @@ med avsendernavn i innboksen i stedet for en naken adresse.
 `MILJO` settes ikke i Azure. Standarden er drift, og da står `Secure` på
 sesjonskapselen.
 
+### «API key is invalid»
+
+Står dette i `sisteKodebestilling`, nådde kallet fram til Resend og ble avvist
+på autentiseringen:
+
+```
+Resend avviste utsendingen (HTTP 401):
+{"statusCode":401,"name":"validation_error","message":"API key is invalid"}
+```
+
+**Resend viser hele nøkkelen bare én gang**, i det øyeblikket den opprettes.
+Går du tilbake til *API Keys* senere, ser du en forkortet versjon —
+`re_abc123…xyz`. Den ser ut som en nøkkel, men er det ikke. Kopierer man den,
+får man nøyaktig denne feilen.
+
+Lag en ny under **API Keys → Create API Key**, kopier den med en gang, og sett
+den:
+
+```bash
+az staticwebapp appsettings set -n famhist-web -g rg-familiehistorie \
+  --setting-names RESEND_NOKKEL="re_…"
+```
+
+Ingen ny utrulling nødvendig — appinnstillinger slår inn på neste kall.
+
 ### DNS for eget avsenderdomene
 
 Resend viser de eksakte verdiene under **Domains → Add domain**. Formen er
