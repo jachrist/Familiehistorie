@@ -1227,3 +1227,77 @@ mark {
   color: var(--blekk-matt);
   font-variant-numeric: tabular-nums;
 }
+
+/* ===================================================================
+   Trinn 11 — berøring og små skjermer
+   =================================================================== */
+
+/*
+ * Reglene gjelder bare der pekeren er grov, altså finger. På mus er 24 px høye
+ * tekstlenker helt greie, og å blåse dem opp for alle ville gjort layouten
+ * luftigere enn den skal være.
+ */
+@media (pointer: coarse) {
+  /*
+   * 16 px er ikke en smakssak: er skriften mindre, zoomer iOS Safari inn på
+   * feltet når det får fokus, og siden hopper. Det skjer hver gang man skal
+   * skrive en bildetekst.
+   */
+  .skjema input[type="text"],
+  .skjema input[type="number"],
+  .skjema input[type="date"],
+  .rik-felt,
+  .inndata,
+  .sok-boks input,
+  .medie-felter input[type="text"],
+  .medie-rad input[type="date"] {
+    font-size: 16px;
+  }
+
+  /*
+   * Tekstlenker beholder størrelsen, men får et treffområde på 44 px. Uten
+   * `inline-block` har padding på en inline-lenke ingen virkning på høyden.
+   */
+  .knapp-lenke,
+  .lenkeknapp,
+  .topp-konto a,
+  .topp-konto button,
+  .aar-panel a {
+    display: inline-block;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .rik-verktoy button,
+  .medie-knapper button,
+  .sok-tom {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Avkrysningsbokser er 13 px som standard. Det er for lite for en finger. */
+  .tilgangsrad-roller input[type="checkbox"],
+  .admin-valg input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/*
+ * Under 420 px har knapperader ikke plass ved siden av hverandre. De strekkes
+ * i stedet ut, slik at hver av dem er lett å treffe.
+ */
+@media (max-width: 420px) {
+  .admin-handlinger .knapp,
+  .admin-handlinger .knapp-sekundaer,
+  .kopirad-knapper .knapp-sekundaer,
+  .koe-advarsel-knapper button,
+  .plakatvelger-knapper .knapp,
+  .plakatvelger-knapper .knapp-sekundaer {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+  .kopirad-knapper {
+    width: 100%;
+  }
+}

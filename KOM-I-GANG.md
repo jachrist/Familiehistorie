@@ -296,6 +296,14 @@ hentet automatisk og byttbart for hånd, avspilling med `playsInline` og
 `preload="metadata"` mot en lese-SAS, og en advarsel før opplastingen starter når
 bitraten tyder på at klippet ikke er transkodet. Se [Video](#video).
 
+**Trinn 11 — mobil, tomtilstander og feilmeldinger.** Skjemafelter er 16 px på
+berøringsskjerm, så iOS ikke zoomer inn når de får fokus; tekstlenker og
+avkrysningsbokser har treffområde uansett hvor små de ser ut; knapperader
+strekkes ut under 420 px. Et år som ikke finnes sier det, både på forsiden og i
+redigeringen — sistnevnte ble tidligere stående på «Henter …» for alltid. Et
+tomt arkiv snakker til den som skal fylle det, ikke til en utvikler med et
+skall. Sikkerhetskopilisten viser de fem siste med en knapp for resten.
+
 **Trinn 9 — innlogging.** Engangskode på e-post, uten Entra og uten
 Microsoft-kontoer. Sesjonen ligger i en `httpOnly`-kapsel klienten ikke kan
 lese; `krevRolle()` i `api/src/vakt.ts` sjekker den ved hvert kall og slår opp
@@ -377,7 +385,10 @@ Blob. Det krever at CORS-reglene på lagringskontoen slipper gjennom `Range`;
 
 ## Hva som bevisst ikke virker ennå
 
-- **Mobiltilpasning og tomtilstander** — trinn 11.
+Fase 1 er ferdig. Det som står igjen er ting fase 2 tar:
+
+- **Kart, tidslinje og slektstre** — egne visninger av det samme innholdet.
+- **Kommentarer og bidrag fra familien** — i dag redigerer bare redaktører.
 
 ## Om koden
 

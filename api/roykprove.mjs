@@ -37,6 +37,7 @@ const { CONTAINER, STI, lesJson, skrivJson, sikreContainere } = await import("./
 const { tomBuffer } = await import("./dist/src/tilgang.js");
 const { slettTabeller } = await import("./dist/src/tabell.js");
 const { kanBestille, lagKode } = await import("./dist/src/kode.js");
+const { sisteUtfall: sisteKodeutfall } = await import("./dist/src/hendelse.js");
 
 function kapsel(som) {
   if (som === "ingen") return {};
@@ -230,6 +231,22 @@ await proev("PUT tilgang med duplikat adresse → 422", 422, () =>
   finn("PUT", "tilgang").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": liste.jsonBody.etag }, body: { personer: [{ epost: REDAKTOER, navn: "En", roller: ["redaktoer"] }, { epost: REDAKTOER, navn: "To", roller: ["familie"] }] } })));
 await proev("PUT tilgang med feil If-Match → 412", 412, () =>
   finn("PUT", "tilgang").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": '"0x8DFEIL"' }, body: { personer: [{ epost: REDAKTOER, navn: "Prøve Redaktør", roller: ["familie", "redaktoer"] }] } })));
+
+console.log("\nTabellen forsvinner under beina");
+// Klienten bufres for prosessens levetid. Blir tabellen borte etterpå, feilet
+// hvert innloggingsforsøk i stillhet fram til verten ble startet på nytt.
+await lagKode("gjenoppretting@eksempel.no");
+// `false`: klientene skal *ikke* glemmes. Ryddes de samtidig, lages neste
+// klient på vanlig vis og retry-veien blir aldri kjørt – prøven ville gått
+// grønt uten å ha prøvd det den heter.
+await slettTabeller(false);
+const etterSletting = await proev("POST /api/auth/kode etter at tabellen er slettet", 202, () =>
+  finn("POST", "auth/kode").handler(req({ method: "POST", headers: JSONH, body: { epost: REDAKTOER }, som: "ingen" })));
+const helbredet = await sisteKodeutfall();
+const kom = helbredet?.utfall === "Engangskode sendt.";
+console.log(`  ${kom ? "ok  " : "FEIL"}  ${"Tabellen opprettes på nytt, koden sendes".padEnd(46)}`);
+if (!kom) { feilet++; console.log("         →", JSON.stringify(helbredet)); }
+void etterSletting;
 
 console.log("\nHelsesjekk");
 const helseAapen = await proev("GET /api/helse uten kapsel", 200, () =>

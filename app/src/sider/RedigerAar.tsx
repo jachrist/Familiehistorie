@@ -141,22 +141,51 @@ export function RedigerAar() {
   const finnes = !nytt && dok.isSuccess;
   const laster = skjema.isPending || (!nytt && dok.isPending) || !klar;
 
+  // Feil må sjekkes før `laster`: `klar` settes av effekten som fyller
+  // skjemaet, og den kjører aldri når hentingen feilet. Uten dette ble siden
+  // stående på «Henter …» for alltid – blant annet for en lenke til et år som
+  // ikke finnes.
+  if (skjema.isError) {
+    return (
+      <Melding tittel="Klarte ikke hente feltdefinisjonene">
+        <p>{skjema.error.message}</p>
+      </Melding>
+    );
+  }
+
+  if (!nytt && dok.isError) {
+    const ikkeFunnet = dok.error instanceof Apifeil && dok.error.status === 404;
+    return (
+      <Melding tittel={ikkeFunnet ? `${aar} finnes ikke ennå` : `Klarte ikke hente ${aar}`}>
+        {ikkeFunnet ? (
+          <>
+            <p>Det er ikke lagt inn noe for dette året.</p>
+            <p>
+              <Link to="/rediger/nytt" className="knapp">
+                Opprett et år
+              </Link>
+            </p>
+          </>
+        ) : (
+          <>
+            <p>{dok.error.message}</p>
+            <p>
+              <button type="button" className="knapp" onClick={() => void dok.refetch()}>
+                Prøv igjen
+              </button>
+            </p>
+          </>
+        )}
+      </Melding>
+    );
+  }
+
   if (laster) {
     return (
       <main className="side">
         <p className="beskjed" role="status">
           Henter …
         </p>
-      </main>
-    );
-  }
-
-  if (skjema.isError) {
-    return (
-      <main className="side">
-        <div className="beskjed beskjed-feil" role="alert">
-          <p>{skjema.error.message}</p>
-        </div>
       </main>
     );
   }
@@ -296,6 +325,28 @@ export function RedigerAar() {
           </span>
         </div>
       </form>
+    </main>
+  );
+}
+
+/** Felles innramming for de tilfellene skjemaet ikke kan vises i det hele tatt. */
+function Melding({ tittel, children }: { tittel: string; children: React.ReactNode }) {
+  return (
+    <main className="side side-smal">
+      <header className="topp topp-smal">
+        <p className="stempel">
+          <Link to="/">Familiehistorie</Link>
+        </p>
+        <h1>{tittel}</h1>
+      </header>
+      <div className="beskjed" role="status">
+        {children}
+        <p>
+          <Link to="/" className="knapp-lenke">
+            ← Til årene
+          </Link>
+        </p>
+      </div>
     </main>
   );
 }

@@ -55,6 +55,32 @@ export function tabell(navn: string): Promise<TableClient> {
   return opprett;
 }
 
+/**
+ * Kjører en operasjon mot en tabell, og prøver én gang til hvis tabellen ikke
+ * finnes.
+ *
+ * Klienten bufres for prosessens levetid, og Functions holder verten i live på
+ * tvers av kall. Forsvinner tabellen etter at klienten ble laget – slettet ved
+ * et uhell, eller aldri opprettet fordi det aller første forsøket røk – blir
+ * hvert eneste innloggingsforsøk deretter liggende og feile helt til verten
+ * startes på nytt. Utad er det usynlig: `/api/auth/kode` svarer 202 uansett.
+ *
+ * Det er nøyaktig den feilen som er vanskeligst å finne. Derfor kastes den
+ * bufrede klienten og operasjonen prøves på nytt, som oppretter tabellen.
+ */
+export async function iTabell<T>(
+  navn: string,
+  arbeid: (klient: TableClient) => Promise<T>
+): Promise<T> {
+  try {
+    return await arbeid(await tabell(navn));
+  } catch (e) {
+    if (!erTabellMangler(e)) throw e;
+    klienter.delete(navn);
+    return await arbeid(await tabell(navn));
+  }
+}
+
 function kontonavn(): string {
   const konto = les("LAGER_KONTO");
   if (!konto) {
@@ -74,6 +100,21 @@ function erTabellFinnes(e: unknown): boolean {
   );
 }
 
+/**
+ * Sann når det er *tabellen* som mangler, ikke raden. Begge svarer 404, så det
+ * er feilkoden som skiller dem.
+ *
+ * Koden ligger ikke alltid på `code`: Table Storage svarer med en OData-feil, og
+ * hvor den havner i `RestError` varierer. Meldingen tas derfor med – sammen med
+ * kravet om 404, så «fant ikke raden» ikke treffer.
+ */
+function erTabellMangler(e: unknown): boolean {
+  if (typeof e !== "object" || e === null) return false;
+  const feil = e as { statusCode?: number; code?: string; message?: string };
+  if (feil.statusCode !== 404) return false;
+  return feil.code === "TableNotFound" || (feil.message ?? "").includes("TableNotFound");
+}
+
 /** Sann når feilen er «fant ikke raden». */
 export function erIkkeFunnet(e: unknown): boolean {
   return (
@@ -87,8 +128,12 @@ export function erIkkeFunnet(e: unknown): boolean {
 /**
  * Brukes bare av røykprøven: tabelltjenesten i Azurite beholder rader mellom
  * kjøringer, og en prøve skal ikke arve tilstand fra forrige.
+ *
+ * `glemKlienter = false` lar de bufrede klientene stå igjen og peke på tabeller
+ * som ikke finnes lenger. Det er nøyaktig tilstanden `iTabell` skal komme seg ut
+ * av, og eneste måten å prøve den på.
  */
-export async function slettTabeller(): Promise<void> {
+export async function slettTabeller(glemKlienter = true): Promise<void> {
   const tilkobling = les("LAGER_TILKOBLING");
   if (!tilkobling) throw new Error("slettTabeller() er bare ment for lokal bruk.");
 
@@ -97,6 +142,6 @@ export async function slettTabeller(): Promise<void> {
   });
   for (const navn of Object.values(TABELL)) {
     await tjeneste.deleteTable(navn).catch(() => undefined);
-    klienter.delete(navn);
+    if (glemKlienter) klienter.delete(navn);
   }
 }

@@ -824,7 +824,7 @@ billig forsikring mot at det lastes opp utranskodet video.
 | 8 | Søk med MiniSearch og filtrering av årslisten |
 | 9 | **OTP-innlogging**: kode på e-post, sesjon, `krevRolle()` i alle endepunkter, tilgangsliste, rate-limiting, private media-SAS |
 | 10 | Video: blokkvis opplasting, plakatbilde, avspilling, advarsel om utranskodet fil ✔ |
-| 11 | Mobiltilpasning, tomtilstander, feilmeldinger på norsk, sikkerhetskopijobb |
+| 11 | Mobiltilpasning, tomtilstander, feilmeldinger på norsk, sikkerhetskopijobb ✔ |
 
 Rekkefølgen er valgt slik at det finnes noe kjørbart å se på fra og med trinn 4.
 

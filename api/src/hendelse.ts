@@ -9,7 +9,7 @@
  * Derfor én rad: hva som skjedde sist, og når. Uten adresse og uten kode, så
  * den kan vises til hvem som helst uten å røpe hvem som står på listen.
  */
-import { TABELL, erIkkeFunnet, tabell } from "./tabell.js";
+import { TABELL, erIkkeFunnet, iTabell } from "./tabell.js";
 
 const PARTISJON = "diagnose";
 const RAD = "siste-kodebestilling";
@@ -37,15 +37,16 @@ function rens(tekst: string): string {
 
 export async function noterUtfall(utfall: string): Promise<void> {
   try {
-    const klient = await tabell(TABELL.sperrer);
-    await klient.upsertEntity<Rad>(
-      {
-        partitionKey: PARTISJON,
-        rowKey: RAD,
-        tidspunkt: new Date().toISOString(),
-        utfall: rens(utfall),
-      },
-      "Replace"
+    await iTabell(TABELL.sperrer, (klient) =>
+      klient.upsertEntity<Rad>(
+        {
+          partitionKey: PARTISJON,
+          rowKey: RAD,
+          tidspunkt: new Date().toISOString(),
+          utfall: rens(utfall),
+        },
+        "Replace"
+      )
     );
   } catch {
     // En diagnoselinje som feiler skal aldri velte innloggingen.
@@ -54,8 +55,9 @@ export async function noterUtfall(utfall: string): Promise<void> {
 
 export async function sisteUtfall(): Promise<Utfall | null> {
   try {
-    const klient = await tabell(TABELL.sperrer);
-    const rad = await klient.getEntity<Rad>(PARTISJON, RAD);
+    const rad = await iTabell(TABELL.sperrer, (klient) =>
+      klient.getEntity<Rad>(PARTISJON, RAD)
+    );
     return { tidspunkt: rad.tidspunkt, utfall: rad.utfall };
   } catch (e) {
     if (erIkkeFunnet(e)) return null;
@@ -76,11 +78,12 @@ export async function sisteUtfall(): Promise<Utfall | null> {
  */
 export async function sjekkTabellager(): Promise<string | null> {
   try {
-    const klient = await tabell(TABELL.sperrer);
-    await klient.getEntity<Rad>(PARTISJON, "finnes-neppe").catch((e: unknown) => {
-      // «Fant ikke raden» er et vellykket svar her: tabellen er tilgjengelig.
-      if (!erIkkeFunnet(e)) throw e;
-    });
+    await iTabell(TABELL.sperrer, (klient) =>
+      klient.getEntity<Rad>(PARTISJON, "finnes-neppe").catch((e: unknown) => {
+        // «Fant ikke raden» er et vellykket svar her: tabellen er tilgjengelig.
+        if (!erIkkeFunnet(e)) throw e;
+      })
+    );
     return null;
   } catch (e) {
     return e instanceof Error ? e.message.slice(0, 200) : "ukjent feil";

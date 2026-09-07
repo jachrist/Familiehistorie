@@ -27,6 +27,7 @@ export function Admin() {
     onSuccess: () => koe.invalidateQueries({ queryKey: noekler.sikkerhetskopier }),
   });
 
+  const [visAlle, settVisAlle] = useState(false);
   const [velgGjenoppretting, settVelgGjenoppretting] = useState<string | null>(null);
   const gjenopprett = useMutation({
     mutationFn: ({ id, aar }: { id: string; aar: number }) => api.gjenopprett(id, aar),
@@ -159,7 +160,7 @@ export function Admin() {
             <p className="beskjed-liten">Ingen sikkerhetskopier ennå.</p>
           ) : (
             <ul className="kopiliste">
-              {kopier.data.kopier.map((kopi) => (
+              {(visAlle ? kopier.data.kopier : kopier.data.kopier.slice(0, VISES)).map((kopi) => (
                 <Kopirad
                   key={kopi.id}
                   kopi={kopi}
@@ -177,6 +178,20 @@ export function Admin() {
               ))}
             </ul>
           ))}
+
+        {/* Med en kopi før hver tømming og gjenoppretting blir listen fort lang,
+            og på telefon skyver den alt annet på siden ut av syne. */}
+        {kopier.isSuccess && kopier.data.kopier.length > VISES && (
+          <button
+            type="button"
+            className="lenkeknapp"
+            onClick={() => settVisAlle((v) => !v)}
+          >
+            {visAlle
+              ? `Vis bare de ${VISES} siste`
+              : `Vis alle ${kopier.data.kopier.length} kopiene`}
+          </button>
+        )}
       </section>
 
       <section className="kort admin-kort">
@@ -353,6 +368,9 @@ export function Admin() {
     </main>
   );
 }
+
+/** Så mange kopier vises før listen må foldes ut. */
+const VISES = 5;
 
 const tidspunkt = new Intl.DateTimeFormat("nb-NO", {
   dateStyle: "long",

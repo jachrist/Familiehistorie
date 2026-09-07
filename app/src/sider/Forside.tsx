@@ -126,9 +126,20 @@ export function Forside() {
       {tilstand.isError && (
         <div className="beskjed beskjed-feil" role="alert">
           <p>{tilstand.error.message}</p>
-          {tilstand.error instanceof Apifeil && tilstand.error.status === 503 && (
+          {/* Skjelningen er ikke pynt: en leser kan ikke gjøre noe med et
+              manglende feltskjema, og en henvisning til et skallkommando er da
+              bare forvirrende. En redaktør kan. */}
+          {tilstand.error instanceof Apifeil && tilstand.error.status === 503 ? (
             <p className="beskjed-hjelp">
-              Kjør <code>npm run seed</code> for å legge inn feltdefinisjonene.
+              {erRedaktoer
+                ? "Feltdefinisjonene mangler i lagringskontoen. Kjør npm run seed:sky."
+                : "Noe mangler i oppsettet. Si fra til den som administrerer nettstedet."}
+            </p>
+          ) : (
+            <p className="beskjed-hjelp">
+              <button type="button" className="lenkeknapp" onClick={() => void tilstand.refetch()}>
+                Prøv igjen
+              </button>
             </p>
           )}
         </div>
@@ -147,16 +158,39 @@ export function Forside() {
         <div className="beskjed">
           <p>Ingen år er lagt inn ennå.</p>
           <p className="beskjed-hjelp">
-            Kjør <code>npm run seed</code> for eksempelår, eller{" "}
             {erRedaktoer ? (
-              <Link to="/rediger/nytt">opprett det første året</Link>
+              <>
+                Begynn med et år du husker godt – det trenger ikke være det
+                første. <Link to="/rediger/nytt">Opprett et år</Link>.
+              </>
             ) : (
-              "be en redaktør legge inn det første året"
+              "Her kommer det ett år av gangen. Be en redaktør legge inn det første."
             )}
-            .
           </p>
         </div>
       )}
+
+      {/* En lenke til et år som ikke finnes – fra e-post, eller etter at året
+          er fjernet – ga tidligere bare forsiden uten noe åpent, og ingen
+          beskjed om hvorfor. */}
+      {tilstand.isSuccess &&
+        apentAar !== undefined &&
+        !tilstand.data.aar.some((r) => r.aar === apentAar) && (
+          <div className="beskjed" role="status">
+            <p>{apentAar} finnes ikke i arkivet.</p>
+            <p className="beskjed-hjelp">
+              {erRedaktoer ? (
+                <>
+                  Året er enten fjernet, eller aldri lagt inn.{" "}
+                  <Link to="/rediger/nytt">Opprett det</Link>, eller velg et annet
+                  under.
+                </>
+              ) : (
+                "Året er enten fjernet, eller aldri lagt inn. Velg et annet under."
+              )}
+            </p>
+          </div>
+        )}
 
       {grupper.map((gruppe) => (
         <TiaarsGruppe key={gruppe.tiaar} tiaar={gruppe.tiaar} antall={gruppe.rader.length}>
@@ -174,7 +208,7 @@ export function Forside() {
       ))}
 
       <footer className="bunn">
-        <p>Trinn 1–9 av fase 1. Video og mobiltilpasning gjenstår.</p>
+        <p>Familiehistorie for familien Christiansen. Sidene er private.</p>
       </footer>
     </main>
   );
