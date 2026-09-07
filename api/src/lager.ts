@@ -20,6 +20,7 @@ export const CONTAINER = {
   innhold: "innhold",
   media: "media",
   originaler: "originaler",
+  sikkerhetskopi: "sikkerhetskopi",
 } as const;
 
 export const STI = {
@@ -103,20 +104,28 @@ export interface LestBlob<T> {
   etag: string;
 }
 
+/** Leser en blob som tekst. `undefined` hvis den ikke finnes. */
+export async function lesTekst(
+  containernavn: string,
+  sti: string
+): Promise<LestBlob<string> | undefined> {
+  const blob = container(containernavn).getBlockBlobClient(sti);
+  try {
+    const svar = await blob.download();
+    return { verdi: await stromTilTekst(svar.readableStreamBody), etag: svar.etag ?? "" };
+  } catch (feil) {
+    if (erStatus(feil, 404)) return undefined;
+    throw feil;
+  }
+}
+
 /** Leser og parser en JSON-blob. `undefined` hvis den ikke finnes. */
 export async function lesJson<T>(
   containernavn: string,
   sti: string
 ): Promise<LestBlob<T> | undefined> {
-  const blob = container(containernavn).getBlockBlobClient(sti);
-  try {
-    const svar = await blob.download();
-    const tekst = await stromTilTekst(svar.readableStreamBody);
-    return { verdi: JSON.parse(tekst) as T, etag: svar.etag ?? "" };
-  } catch (feil) {
-    if (erStatus(feil, 404)) return undefined;
-    throw feil;
-  }
+  const lest = await lesTekst(containernavn, sti);
+  return lest ? { verdi: JSON.parse(lest.verdi) as T, etag: lest.etag } : undefined;
 }
 
 export interface SkriveVilkaar {
@@ -126,18 +135,18 @@ export interface SkriveVilkaar {
   maaVaereNy?: boolean;
 }
 
-/** Skriver en JSON-blob. Returnerer den nye ETag-en. */
-export async function skrivJson(
+/** Skriver tekst til en blob. Returnerer den nye ETag-en. */
+export async function skrivTekst(
   containernavn: string,
   sti: string,
-  verdi: unknown,
+  tekst: string,
+  type: string,
   vilkaar: SkriveVilkaar = {}
 ): Promise<string> {
   const blob = container(containernavn).getBlockBlobClient(sti);
-  const kropp = JSON.stringify(verdi, null, 2);
 
-  const svar = await blob.upload(kropp, Buffer.byteLength(kropp), {
-    blobHTTPHeaders: { blobContentType: "application/json; charset=utf-8" },
+  const svar = await blob.upload(tekst, Buffer.byteLength(tekst), {
+    blobHTTPHeaders: { blobContentType: type },
     conditions: vilkaar.ifMatch
       ? { ifMatch: vilkaar.ifMatch }
       : vilkaar.maaVaereNy
@@ -146,6 +155,22 @@ export async function skrivJson(
   });
 
   return svar.etag ?? "";
+}
+
+/** Skriver en JSON-blob. Returnerer den nye ETag-en. */
+export function skrivJson(
+  containernavn: string,
+  sti: string,
+  verdi: unknown,
+  vilkaar: SkriveVilkaar = {}
+): Promise<string> {
+  return skrivTekst(
+    containernavn,
+    sti,
+    JSON.stringify(verdi, null, 2),
+    "application/json; charset=utf-8",
+    vilkaar
+  );
 }
 
 export async function slettBlob(containernavn: string, sti: string): Promise<boolean> {
@@ -181,9 +206,24 @@ async function stromTilTekst(strom: NodeJS.ReadableStream | undefined): Promise<
 
 /** Alle blobstier i en container, med valgfritt prefiks. */
 export async function listBlober(containernavn: string, prefiks = ""): Promise<string[]> {
-  const navn: string[] = [];
-  for await (const blob of container(containernavn).listBlobsFlat({ prefix: prefiks })) {
-    navn.push(blob.name);
+  return (await listMedStorrelse(containernavn, prefiks)).map((b) => b.sti);
+}
+
+/**
+ * Som `listBlober`, men med størrelsen på hver. Containeren trenger ikke finnes
+ * – da er svaret tomt. Det er tilfellet lokalt før første `npm run seed`, og i
+ * Azure for en container som er lagt til etter at kontoen ble opprettet.
+ */
+export async function listMedStorrelse(
+  containernavn: string,
+  prefiks = ""
+): Promise<{ sti: string; bytes: number }[]> {
+  const klient = container(containernavn);
+  if (!(await klient.exists())) return [];
+
+  const blober: { sti: string; bytes: number }[] = [];
+  for await (const blob of klient.listBlobsFlat({ prefix: prefiks })) {
+    blober.push({ sti: blob.name, bytes: blob.properties.contentLength ?? 0 });
   }
-  return navn;
+  return blober;
 }

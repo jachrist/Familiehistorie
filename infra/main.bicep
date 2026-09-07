@@ -98,6 +98,17 @@ resource originaler 'Microsoft.Storage/storageAccounts/blobServices/containers@2
   }
 }
 
+// Sikkerhetskopiene som admin-siden tar. Egen container, ikke et prefiks under
+// innhold: en tømming lister hele innhold-containeren, og kopiene skal ikke
+// kunne havne i den listen.
+resource sikkerhetskopi 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobtjeneste
+  name: 'sikkerhetskopi'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 resource tabelltjeneste 'Microsoft.Storage/storageAccounts/tableServices@2023-05-01' = {
   parent: lager
   name: 'default'

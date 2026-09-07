@@ -96,8 +96,8 @@ export function Forside() {
           {erRedaktoer && (
             <>
               {" · "}
-              <Link to="/tilgang" className="knapp-lenke">
-                Tilgang
+              <Link to="/admin" className="knapp-lenke">
+                Admin
               </Link>
             </>
           )}

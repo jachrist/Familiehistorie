@@ -157,6 +157,10 @@ npm run tom:sky -- --slett           # årsdokumenter og indeks
 npm run tom:sky -- --slett --media   # også bilder og video
 ```
 
+**Det samme kan gjøres fra `/admin` i appen**, uten skall og uten
+tilkoblingsstreng — og der tas det en sikkerhetskopi først. Skriptene finnes for
+tilfellet der appen ikke svarer.
+
 **Tørrkjøring er standard**, og med et skall som har TTY må antallet skrives
 inn for å bekrefte. `felter.json` og `tilgang.json` røres aldri — det første er
 oppsett, det andre er veien inn.

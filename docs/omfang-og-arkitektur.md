@@ -341,6 +341,11 @@ Alle endepunkter under `/api`. Skriveoperasjoner krever rollen `redaktoer`.
 | `POST` | `/api/media/opplasting` | redaktør | Tar en liste med filnavn + MIME-typer, returnerer skrive-SAS (15 min) per fil |
 | `POST` | `/api/vedlikehold/rydd-media` | redaktør | Sletter mediefiler ingen årsdokumenter viser til. Tørrkjøring uten `?slett=ja` |
 | `POST` | `/api/vedlikehold/bygg-indeks` | redaktør | Bygg `indeks.json` på nytt fra alle årsdokumenter |
+| `POST` | `/api/vedlikehold/sikkerhetskopi` | redaktør | Kopierer år, feltskjema og tilgangsliste til `sikkerhetskopi`-containeren |
+| `GET` | `/api/vedlikehold/sikkerhetskopi` | redaktør | Listen over kopier, nyeste først |
+| `GET` | `/api/vedlikehold/sikkerhetskopi/{id}` | redaktør | Én kopi som nedlastbar fil (`Content-Disposition: attachment`) |
+| `POST` | `/api/vedlikehold/gjenopprett` | redaktør | Skriver en kopi tilbake. Rører ikke tilgangslisten. Tar kopi av nåværende innhold først |
+| `POST` | `/api/vedlikehold/tom` | redaktør | Tømmer innholdet. Tørrkjøring uten `bekreft`; `bekreft` må stemme med opptellingen |
 | `POST` | `/api/auth/kode` | åpen | Ber om engangskode på e-post. Svarer alltid `202` ([§9.3](#93-innloggingsflyten)) |
 | `POST` | `/api/auth/verifiser` | åpen | Bytter kode mot sesjon; setter `fh_sesjon`-kapselen |
 | `POST` | `/api/auth/logg-ut` | familie | Sletter kapselen (`Max-Age=0`) |
@@ -593,7 +598,8 @@ Tailwind — smakssak, ikke arkitektur.
 | `/aar/:aar` | Samme årsside som permalenke — for deling og dyplenking |
 | `/rediger/:aar` | Redigeringsskjema, generert fra `felter.json` |
 | `/rediger/nytt` | Opprett år: velg årstall, resten som over |
-| `/rediger/tilgang` | Tilgangslisten: hvem som er med, og hvem som kan redigere |
+| `/admin` | Vedlikehold: familiemedlemmer, sikkerhetskopier, opprydding, tømming |
+| `/tilgang` | Tilgangslisten: hvem som er med, og hvem som kan redigere |
 | `/logg-inn` | E-postadresse, deretter engangskode. Husker hvor du var på vei |
 
 ### Forsiden

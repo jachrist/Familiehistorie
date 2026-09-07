@@ -204,6 +204,7 @@ den dagen noen legger inn en. Derfor lages den av `npm run installer` fra
 | `npm run seed:sky` | Samme, men mot Azure (henter nøkkel via `az`) |
 | `npm run tom` | Viser hva som ville blitt slettet av innhold i Azurite |
 | `npm run tom:sky` | Samme mot Azure. `-- --slett` utfører, `--media` tar med filene |
+| `npm run proev -- --tom` | Røykprøve inkludert tømming og gjenoppretting. Sletter alt lokalt |
 | `npm run proev` | Røykprøve av API-et mot Azurite |
 | `npm run proev:epost` | Prøver e-postutsendingen mot en stubb, uten å sende noe |
 | `npm run build` | Bygger `api/` og `app/` |
@@ -261,6 +262,11 @@ livssyklusregler. Static Web App på gratisplanen.
 | `POST /api/media/opplasting` | Skrive-SAS for inntil 60 filer i ett kall |
 | `POST /api/vedlikehold/bygg-indeks` | Bygger `indeks.json` fra årsdokumentene |
 | `POST /api/vedlikehold/rydd-media` | Sletter mediefiler ingen år viser til |
+| `POST /api/vedlikehold/sikkerhetskopi` | Tar en kopi av år, feltskjema og tilgangsliste |
+| `GET /api/vedlikehold/sikkerhetskopi` | Listen over kopier |
+| `GET /api/vedlikehold/sikkerhetskopi/{id}` | Laster ned én kopi som fil |
+| `POST /api/vedlikehold/gjenopprett` | Skriver en kopi tilbake |
+| `POST /api/vedlikehold/tom` | Tømmer innholdet. Tørrkjøring uten `bekreft` |
 | `POST /api/auth/kode` · `POST /api/auth/verifiser` | Engangskode og innlogging |
 | `GET /api/meg` · `POST /api/auth/logg-ut` | Hvem er innlogget, og utlogging |
 | `GET /api/tilgang` · `PUT /api/tilgang` | Tilgangslisten |
@@ -293,6 +299,37 @@ tilgangen umiddelbart. Koden er sekssifret, varer i ti minutter, tåler fem
 forsøk, og kan bestilles fem ganger per adresse per time. Tilgangslisten
 redigeres på `/tilgang` av en redaktør. Dyplenker overlever innlogging: URL-en
 står, og siden vises når koden er godtatt.
+
+## Admin-siden
+
+`/admin`, for redaktører. Den gjør det samme som skriptene under `verktoy/`,
+men fra nettleseren — nettstedet drives fra en iPad, og et skript som krever et
+skall, `npm install` og en tilkoblingsstreng er i praksis en operasjon som ikke
+finnes der.
+
+| Seksjon | Gjør |
+|---|---|
+| Familiemedlemmer | Teller listen og lenker til `/tilgang` |
+| Sikkerhetskopi | Tar kopi, viser kopiene, laster ned én som fil, gjenoppretter |
+| Ubrukte mediefiler | Tørrkjøring, så sletting — samme som `rydd-media` |
+| Tøm innholdet | Bak en luke: tell opp, skriv antallet, slett |
+
+**Sikkerhetskopien dekker år, feltskjema og tilgangsliste.** Mediefilene
+kopieres ikke; de listes med sti og størrelse, så en gjenoppretting kan si hva
+som mangler. Bildene er beskyttet av versjonering og angrefrist på
+lagringskontoen i stedet — en kopi av hele mediemappen per knappetrykk ville
+doblet lagringen hver gang. Nedlastingen gir filen utenfor Azure, som på iPad
+havner i Filer.
+
+**Tømming og gjenoppretting tar alltid en kopi først**, uten at noen ber om det.
+Begge er operasjoner man kan gjøre ved et uhell, og en kopi koster noen kilobyte.
+Tømmingen rører aldri `felter.json` eller `tilgang.json` — uten dem ville
+nettstedet vært både tomt og låst. Gjenopprettingen rører aldri tilgangslisten:
+en gammel liste kan mangle den som står og gjenoppretter, og da er man låst ute
+av det eneste stedet listen kan endres.
+
+**Tømming over 800 filer tar flere runder.** Managed functions har en fast
+tidsgrense; svaret sier hvor mange som gjenstår, og siden ber om en runde til.
 
 ## Hva som bevisst ikke virker ennå
 

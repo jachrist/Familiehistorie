@@ -231,6 +231,105 @@ await proev("PUT tilgang med duplikat adresse → 422", 422, () =>
 await proev("PUT tilgang med feil If-Match → 412", 412, () =>
   finn("PUT", "tilgang").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": '"0x8DFEIL"' }, body: { personer: [{ epost: REDAKTOER, navn: "Prøve Redaktør", roller: ["familie", "redaktoer"] }] } })));
 
+console.log("\nSikkerhetskopi");
+const kopi = await proev("POST /api/vedlikehold/sikkerhetskopi", 200, () =>
+  finn("POST", "vedlikehold/sikkerhetskopi").handler(req({ method: "POST", headers: JSONH, body: {} })));
+console.log(`         → ${kopi.jsonBody?.id}, ${kopi.jsonBody?.antallAar} år, ${kopi.jsonBody?.bytes} B`);
+const kopi2 = await proev("POST sikkerhetskopi en gang til", 200, () =>
+  finn("POST", "vedlikehold/sikkerhetskopi").handler(req({ method: "POST", headers: JSONH, body: {} })));
+const egenId = kopi2.jsonBody?.id && kopi2.jsonBody.id !== kopi.jsonBody?.id;
+console.log(`  ${egenId ? "ok  " : "FEIL"}  ${"To kopier på rad får hver sin id".padEnd(46)}`);
+if (!egenId) { feilet++; console.log("         →", kopi.jsonBody?.id, kopi2.jsonBody?.id); }
+
+await proev("POST sikkerhetskopi som familie → 403", 403, () =>
+  finn("POST", "vedlikehold/sikkerhetskopi").handler(req({ method: "POST", headers: JSONH, body: {}, som: "familie" })));
+
+const kopiliste = await proev("GET /api/vedlikehold/sikkerhetskopi", 200, () =>
+  finn("GET", "vedlikehold/sikkerhetskopi").handler(req({})));
+const iListen = (kopiliste.jsonBody?.kopier ?? []).some((k) => k.id === kopi.jsonBody?.id);
+console.log(`  ${iListen ? "ok  " : "FEIL"}  ${"Kopien står i listen".padEnd(46)}`);
+if (!iListen) feilet++;
+
+const nedlasting = await proev("GET sikkerhetskopi/{id} → nedlasting", 200, () =>
+  finn("GET", "vedlikehold/sikkerhetskopi/{id}").handler(req({ params: { id: kopi.jsonBody.id } })));
+const vedlegg = String(nedlasting.headers?.["Content-Disposition"] ?? "");
+const erVedlegg = vedlegg.startsWith("attachment;") && vedlegg.includes(kopi.jsonBody.id);
+console.log(`  ${erVedlegg ? "ok  " : "FEIL"}  ${"Svaret er et vedlegg med filnavn".padEnd(46)}`);
+if (!erVedlegg) { feilet++; console.log("         →", vedlegg); }
+const pakket = JSON.parse(nedlasting.body ?? "{}");
+const harInnhold = Array.isArray(pakket.aar) && pakket.tilgang?.personer?.length === 2 && Array.isArray(pakket.mediefiler);
+console.log(`  ${harInnhold ? "ok  " : "FEIL"}  ${"Kopien inneholder år, tilgang og medieliste".padEnd(46)}`);
+if (!harInnhold) feilet++;
+
+await proev("GET sikkerhetskopi med sti i id → 400", 400, () =>
+  finn("GET", "vedlikehold/sikkerhetskopi/{id}").handler(req({ params: { id: "../innhold/tilgang" } })));
+await proev("GET sikkerhetskopi som ikke finnes → 404", 404, () =>
+  finn("GET", "vedlikehold/sikkerhetskopi/{id}").handler(req({ params: { id: "1999-01-01T000000" } })));
+
+console.log("\nTømming");
+await proev("POST /api/vedlikehold/tom uten JSON → 415", 415, () =>
+  finn("POST", "vedlikehold/tom").handler(req({ method: "POST", headers: { "content-type": "text/plain" }, body: {} })));
+await proev("POST /api/vedlikehold/tom som familie → 403", 403, () =>
+  finn("POST", "vedlikehold/tom").handler(req({ method: "POST", headers: JSONH, body: {}, som: "familie" })));
+
+const torr = await proev("POST tom uten bekreft → tørrkjøring", 200, () =>
+  finn("POST", "vedlikehold/tom").handler(req({ method: "POST", headers: JSONH, body: {} })));
+console.log(`         → ${torr.jsonBody?.telling?.sum} filer, slettet ${torr.jsonBody?.slettet}`);
+const rortIkke = torr.jsonBody?.torrkjoring === true && torr.jsonBody?.slettet === 0;
+console.log(`  ${rortIkke ? "ok  " : "FEIL"}  ${"Tørrkjøringen slettet ingenting".padEnd(46)}`);
+if (!rortIkke) feilet++;
+
+await proev("POST tom med feil antall → 409", 409, () =>
+  finn("POST", "vedlikehold/tom").handler(req({ method: "POST", headers: JSONH, body: { bekreft: torr.jsonBody.telling.sum + 7 } })));
+
+// Selve slettingen kjøres bare når man ber om det: den tar alle årene i den
+// lokale Azurite-kontoen, ikke bare prøveårene.
+if (process.argv.includes("--tom")) {
+  const foer = torr.jsonBody.telling.sum;
+  const tomt = await proev("POST tom med riktig antall → slettet", 200, () =>
+    finn("POST", "vedlikehold/tom").handler(req({ method: "POST", headers: JSONH, body: { bekreft: foer } })));
+  console.log(`         → slettet ${tomt.jsonBody?.slettet}, kopi ${tomt.jsonBody?.sikkerhetskopi?.id}`);
+  const etterpaa = await finn("POST", "vedlikehold/tom").handler(req({ method: "POST", headers: JSONH, body: {} }));
+  const tomtNaa = etterpaa.jsonBody?.telling?.sum === 0;
+  console.log(`  ${tomtNaa ? "ok  " : "FEIL"}  ${"Ingenting igjen etter tømming".padEnd(46)}`);
+  if (!tomtNaa) feilet++;
+  const felterIgjen = await lesJson(CONTAINER.innhold, STI.felter);
+  const tilgangIgjen = await lesJson(CONTAINER.innhold, STI.tilgang);
+  const beholdt = Boolean(felterIgjen && tilgangIgjen);
+  console.log(`  ${beholdt ? "ok  " : "FEIL"}  ${"felter.json og tilgang.json står igjen".padEnd(46)}`);
+  if (!beholdt) feilet++;
+
+  console.log("\nGjenoppretting");
+  const foerKopi = tomt.jsonBody.sikkerhetskopi;
+  await proev("POST gjenopprett med feil antall → 409", 409, () =>
+    finn("POST", "vedlikehold/gjenopprett").handler(req({ method: "POST", headers: JSONH, body: { id: foerKopi.id, bekreft: foerKopi.antallAar + 3 } })));
+  await proev("POST gjenopprett som familie → 403", 403, () =>
+    finn("POST", "vedlikehold/gjenopprett").handler(req({ method: "POST", headers: JSONH, body: { id: foerKopi.id, bekreft: foerKopi.antallAar }, som: "familie" })));
+  await proev("POST gjenopprett av kopi som ikke finnes → 404", 404, () =>
+    finn("POST", "vedlikehold/gjenopprett").handler(req({ method: "POST", headers: JSONH, body: { id: "1999-01-01T000000", bekreft: 0 } })));
+
+  const tilbake = await proev("POST gjenopprett fra kopien før tømmingen", 200, () =>
+    finn("POST", "vedlikehold/gjenopprett").handler(req({ method: "POST", headers: JSONH, body: { id: foerKopi.id, bekreft: foerKopi.antallAar } })));
+  console.log(`         → ${tilbake.jsonBody?.aar} år tilbake fra ${tilbake.jsonBody?.fra}`);
+
+  const etterGjenoppretting = await finn("POST", "vedlikehold/tom").handler(req({ method: "POST", headers: JSONH, body: {} }));
+  const alleTilbake = etterGjenoppretting.jsonBody?.telling?.aar === foerKopi.antallAar;
+  console.log(`  ${alleTilbake ? "ok  " : "FEIL"}  ${"Alle årene er tilbake".padEnd(46)}`);
+  if (!alleTilbake) { feilet++; console.log("         →", etterGjenoppretting.jsonBody?.telling); }
+
+  const indeksEtter = await finn("GET", "indeks").handler(req({}));
+  const indeksBygd = indeksEtter.jsonBody?.aar?.length === foerKopi.antallAar;
+  console.log(`  ${indeksBygd ? "ok  " : "FEIL"}  ${"Indeksen er bygd på nytt".padEnd(46)}`);
+  if (!indeksBygd) feilet++;
+
+  const tilgangEtter = await lesJson(CONTAINER.innhold, STI.tilgang);
+  const proevelisteStaar = tilgangEtter?.verdi?.personer?.some((p) => p.epost === REDAKTOER);
+  console.log(`  ${proevelisteStaar ? "ok  " : "FEIL"}  ${"Gjenoppretting rørte ikke tilgangslisten".padEnd(46)}`);
+  if (!proevelisteStaar) feilet++;
+} else {
+  console.log("  hopp  Selve slettingen (kjør med --tom for å ta den)");
+}
+
 await rydd();
 await gjenopprettTilgang();
 

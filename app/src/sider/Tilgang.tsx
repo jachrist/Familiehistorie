@@ -60,8 +60,8 @@ export function Tilgang() {
     <main className="side">
       <header className="topp">
         <p className="stempel">
-          <Link to="/" className="knapp-lenke">
-            ← Til årene
+          <Link to="/admin" className="knapp-lenke">
+            ← Til admin
           </Link>
         </p>
         <h1>Tilgang</h1>

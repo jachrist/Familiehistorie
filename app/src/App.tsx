@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useOkt } from "./auth/okt.js";
+import { Admin } from "./sider/Admin.js";
 import { Forside } from "./sider/Forside.js";
 import { Innlogging } from "./sider/Innlogging.js";
 import { RedigerAar } from "./sider/RedigerAar.js";
@@ -52,6 +53,7 @@ export function App() {
       <Route path="/rediger/:aar" element={<RedigerAar />} />
       {/* Serveren avviser uansett, men en rute som ikke finnes for lesere er
           en tydeligere beskjed enn en 403 etterpå. */}
+      {erRedaktoer && <Route path="/admin" element={<Admin />} />}
       {erRedaktoer && <Route path="/tilgang" element={<Tilgang />} />}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

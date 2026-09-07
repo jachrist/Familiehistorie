@@ -8,12 +8,16 @@ import type {
   AarsdokumentInn,
   AarsdokumentMedUrl,
   Feltskjema,
+  Gjenopprettingssvar,
   Indeks,
   Innlogget,
   Opplastingsforesporsel,
   Opplastingssvar,
+  Ryddesvar,
+  Sikkerhetskopi,
   Tilgangsliste,
   TilgangslisteMedEtag,
+  Tommesvar,
 } from "../../../delt/typer.js";
 
 export class Apifeil extends Error {
@@ -119,10 +123,43 @@ export const api = {
     }),
 
   ryddMedia: (slett: boolean) =>
-    hent<{ ubrukte: string[]; slettet: number; torrkjoring: boolean }>(
-      `/api/vedlikehold/rydd-media${slett ? "?slett=ja" : ""}`,
-      { method: "POST", headers: JSONHODER, body: "{}" }
-    ),
+    hent<Ryddesvar>(`/api/vedlikehold/rydd-media${slett ? "?slett=ja" : ""}`, {
+      method: "POST",
+      headers: JSONHODER,
+      body: "{}",
+    }),
+
+  sikkerhetskopier: () =>
+    hent<{ kopier: Sikkerhetskopi[] }>("/api/vedlikehold/sikkerhetskopi"),
+
+  taSikkerhetskopi: () =>
+    hent<Sikkerhetskopi>("/api/vedlikehold/sikkerhetskopi", {
+      method: "POST",
+      headers: JSONHODER,
+      body: "{}",
+    }),
+
+  /**
+   * Lenke, ikke kall: nedlastingen skal skje som en vanlig navigasjon, så
+   * nettleseren tilbyr «Lagre i Filer» i stedet for at appen må bygge en fil i
+   * minnet. Kapselen følger med fordi det er samme opphav.
+   */
+  sikkerhetskopiUrl: (id: string) => `/api/vedlikehold/sikkerhetskopi/${id}`,
+
+  gjenopprett: (id: string, bekreft: number) =>
+    hent<Gjenopprettingssvar>("/api/vedlikehold/gjenopprett", {
+      method: "POST",
+      headers: JSONHODER,
+      body: JSON.stringify({ id, bekreft }),
+    }),
+
+  /** Uten `bekreft` er kallet en tørrkjøring og sletter ingenting. */
+  tom: (media: boolean, bekreft?: number) =>
+    hent<Tommesvar>("/api/vedlikehold/tom", {
+      method: "POST",
+      headers: JSONHODER,
+      body: JSON.stringify(bekreft === undefined ? { media } : { media, bekreft }),
+    }),
 };
 
 /** Nøkler for TanStack Query. Samlet ett sted så invalidering blir presis. */
@@ -130,6 +167,7 @@ export const noekler = {
   meg: ["meg"] as const,
   tilgang: ["tilgang"] as const,
   indeks: ["indeks"] as const,
+  sikkerhetskopier: ["sikkerhetskopier"] as const,
   felter: ["felter"] as const,
   aar: (aar: number) => ["aar", aar] as const,
 };

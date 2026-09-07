@@ -12,3 +12,4 @@ import "./funksjoner/aar.js";
 import "./funksjoner/media.js";
 import "./funksjoner/ping.js";
 import "./funksjoner/tilgangsliste.js";
+import "./funksjoner/vedlikehold.js";

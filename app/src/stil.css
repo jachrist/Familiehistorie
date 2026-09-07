@@ -1033,3 +1033,122 @@ mark {
     align-items: stretch;
   }
 }
+
+/* --- admin --- */
+.admin-kort {
+  margin-top: 24px;
+}
+.admin-kort h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+}
+.admin-hjelp {
+  margin: 0 0 14px;
+  color: var(--blekk-svak);
+  font-size: 0.94rem;
+}
+.admin-tall {
+  margin: 0 0 14px;
+  font-variant-numeric: tabular-nums;
+}
+.admin-handlinger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 0;
+}
+.admin-valg {
+  display: block;
+  margin: 0 0 8px;
+}
+.admin-telling {
+  margin: 14px 0;
+  padding-left: 20px;
+  color: var(--blekk-svak);
+  font-variant-numeric: tabular-nums;
+}
+
+.kopiliste {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--strek-svak);
+}
+.kopirad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--strek-svak);
+}
+.kopirad-tid {
+  margin: 0;
+  font-weight: 600;
+}
+.kopirad-detalj {
+  margin: 2px 0 0;
+  color: var(--blekk-matt);
+  font-size: 0.86rem;
+}
+
+/*
+ * Tømmingen ligger bak en luke. Den er den eneste operasjonen i appen som ikke
+ * kan angres fra appen selv, og skal ikke være en knapp man skummer forbi på vei
+ * til å legge til et familiemedlem.
+ */
+.admin-farlig {
+  border-color: var(--varsel);
+}
+.admin-farlig > summary {
+  cursor: pointer;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--varsel);
+  list-style-position: inside;
+}
+.admin-farlig > summary:focus-visible {
+  outline: 2px solid var(--aksent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.admin-farlig[open] > summary {
+  margin-bottom: 12px;
+}
+.knapp-farlig {
+  background: var(--varsel);
+}
+.knapp-farlig:hover:not(:disabled) {
+  background: var(--varsel);
+  filter: brightness(1.1);
+}
+.kopirad {
+  display: block;
+}
+.kopirad-topp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.kopirad-knapper {
+  display: flex;
+  gap: 8px;
+}
+.kopirad-bekreft {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--varsel-svak);
+  border-radius: var(--radius);
+}
+.kopirad-bekreft p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.inndata-antall {
+  max-width: 140px;
+  font-variant-numeric: tabular-nums;
+}
