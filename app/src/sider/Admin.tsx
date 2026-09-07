@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Sikkerhetskopi } from "../../../delt/typer.js";
 import { api, noekler } from "../api/klient.js";
+import { formatterBytes } from "../format.js";
 
 /**
  * Admin-siden.
@@ -358,13 +359,6 @@ const tidspunkt = new Intl.DateTimeFormat("nb-NO", {
   timeStyle: "short",
 });
 
-function storrelse(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} kB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
-}
-
 interface Kopiradsprops {
   kopi: Sikkerhetskopi;
   apen: boolean;
@@ -381,9 +375,9 @@ function Kopirad({ kopi, apen, venter, paaVelg, paaAvbryt, paaGjenopprett }: Kop
         <div>
           <p className="kopirad-tid">{tidspunkt.format(new Date(kopi.tidspunkt))}</p>
           <p className="kopirad-detalj">
-            {kopi.grunn.toLowerCase()} · {kopi.antallAar} år · {storrelse(kopi.bytes)}
+            {kopi.grunn.toLowerCase()} · {kopi.antallAar} år · {formatterBytes(kopi.bytes)}
             {kopi.antallMediefiler > 0 &&
-              ` · ${kopi.antallMediefiler} mediefiler (${storrelse(kopi.mediebytes)}) er ikke med`}
+              ` · ${kopi.antallMediefiler} mediefiler (${formatterBytes(kopi.mediebytes)}) er ikke med`}
           </p>
         </div>
 

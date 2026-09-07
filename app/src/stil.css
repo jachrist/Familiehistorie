@@ -709,6 +709,7 @@ code {
   background: var(--flate);
 }
 .medie-bilde {
+  position: relative;
   width: 56px;
   height: 56px;
   border-radius: 4px;
@@ -1150,5 +1151,79 @@ mark {
 }
 .inndata-antall {
   max-width: 140px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- video --- */
+.koe-advarsel {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--varsel-svak);
+  border-radius: var(--radius);
+}
+.koe-advarsel p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.koe-advarsel-hjelp {
+  margin-top: 6px !important;
+  color: var(--blekk-svak);
+}
+.koe-advarsel-knapper {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.koe-bekreft .koe-status {
+  color: var(--varsel);
+}
+
+.medie-varighet {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(16, 27, 45, 0.78);
+  color: #fff;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+.medie-plakat {
+  gap: 10px;
+  color: var(--blekk-matt);
+  font-size: 0.85rem;
+}
+.medie-mangler {
+  color: var(--varsel);
+}
+
+.plakatvelger {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--flate-2);
+  border-radius: var(--radius);
+}
+.plakatvelger-hjelp {
+  margin: 0 0 10px;
+  color: var(--blekk-svak);
+  font-size: 0.88rem;
+}
+.plakatvelger video {
+  width: 100%;
+  max-height: 420px;
+  background: #000;
+  border-radius: 4px;
+}
+.plakatvelger-knapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.plakatvelger-tid {
+  color: var(--blekk-matt);
   font-variant-numeric: tabular-nums;
 }

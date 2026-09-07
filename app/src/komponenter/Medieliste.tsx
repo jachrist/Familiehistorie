@@ -1,4 +1,7 @@
+import { useState } from "react";
 import type { Medieobjekt } from "../../../delt/typer.js";
+import { formatterVarighet } from "../format.js";
+import { Plakatvelger } from "./Plakatvelger.js";
 
 /**
  * Bildetekstlisten.
@@ -9,13 +12,18 @@ import type { Medieobjekt } from "../../../delt/typer.js";
  * for den som har mange rader å flytte.
  */
 interface Props {
+  aar: number;
   media: Medieobjekt[];
   /** Kortlevde lese-URL-er, oppslag på medie-id. Nyopplastede har ingen ennå. */
   forhaandsvisning: Record<string, string | undefined>;
+  /** Lese-URL til selve videofilen. Bare for lagrede videoer. */
+  videourler: Record<string, string | undefined>;
   onEndret: (media: Medieobjekt[]) => void;
 }
 
-export function Medieliste({ media, forhaandsvisning, onEndret }: Props) {
+export function Medieliste({ aar, media, forhaandsvisning, videourler, onEndret }: Props) {
+  const [velger, settVelger] = useState<string | null>(null);
+
   if (media.length === 0) return null;
 
   const sortert = [...media].sort((a, b) => a.rekkefolge - b.rekkefolge);
@@ -46,6 +54,9 @@ export function Medieliste({ media, forhaandsvisning, onEndret }: Props) {
               ) : (
                 <span className="medie-merke">{m.type === "video" ? "film" : "nytt"}</span>
               )}
+              {m.type === "video" && m.varighet ? (
+                <span className="medie-varighet">{formatterVarighet(m.varighet)}</span>
+              ) : null}
             </div>
 
             <div className="medie-felter">
@@ -71,6 +82,36 @@ export function Medieliste({ media, forhaandsvisning, onEndret }: Props) {
                   {m.fil.split("/").pop()}
                 </span>
               </div>
+
+              {m.type === "video" && (
+                <div className="medie-rad medie-plakat">
+                  {!m.plakat && <span className="medie-mangler">mangler plakatbilde</span>}
+                  {videourler[m.id] ? (
+                    <button
+                      type="button"
+                      className="lenkeknapp"
+                      onClick={() => settVelger(velger === m.id ? null : m.id)}
+                    >
+                      {velger === m.id ? "Lukk" : m.plakat ? "Bytt plakatbilde" : "Velg plakatbilde"}
+                    </button>
+                  ) : (
+                    // URL-en kommer fra årsdokumentet, som ikke er skrevet ennå.
+                    <span className="medie-mangler">lagre året for å velge plakatbilde</span>
+                  )}
+                </div>
+              )}
+
+              {velger === m.id && videourler[m.id] && (
+                <Plakatvelger
+                  aar={aar}
+                  videoUrl={videourler[m.id]!}
+                  onValgt={(plakat, varighet) => {
+                    endre(m.id, varighet ? { plakat, varighet } : { plakat });
+                    settVelger(null);
+                  }}
+                  onLukk={() => settVelger(null)}
+                />
+              )}
             </div>
 
             <div className="medie-knapper">

@@ -44,6 +44,16 @@ export function RedigerAar() {
     return kart;
   }, [dok.data]);
 
+  // Selve videofilen, som plakatvelgeren spoler i. Bare for lagrede videoer –
+  // en nyopplastet har ingen lese-URL før året er skrevet.
+  const videourler = useMemo(() => {
+    const kart: Record<string, string | undefined> = {};
+    for (const m of dok.data?.media ?? []) {
+      if (m.type === "video") kart[m.id] = m.url;
+    }
+    return kart;
+  }, [dok.data]);
+
   // Fyll skjemaet fra serveren, eller fra et lagret utkast hvis det er nyere.
   useEffect(() => {
     if (lastet.current) return;
@@ -266,7 +276,13 @@ export function RedigerAar() {
           }}
         />
 
-        <Medieliste media={media} forhaandsvisning={forhaandsvisning} onEndret={endreMedia} />
+        <Medieliste
+          aar={aar}
+          media={media}
+          forhaandsvisning={forhaandsvisning}
+          videourler={videourler}
+          onEndret={endreMedia}
+        />
 
         <div className="skjema-bunn">
           <button type="submit" className="knapp" disabled={lagring.isPending || ugyldigAar}>

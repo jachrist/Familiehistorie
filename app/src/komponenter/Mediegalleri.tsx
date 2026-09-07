@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { MedieobjektMedUrl } from "../../../delt/typer.js";
+import { formatterVarighet } from "../format.js";
 
 /**
  * Bilder og video for ett år.
@@ -49,7 +50,22 @@ function Bilde({ m }: { m: MedieobjektMedUrl }) {
 function Video({ m }: { m: MedieobjektMedUrl }) {
   return (
     <figure className="galleri-post galleri-video">
-      <video controls preload="metadata" poster={m.plakatUrl ?? undefined}>
+      {/*
+        `playsInline` er ikke pynt: uten den tar iOS over hele skjermen så snart
+        noen trykker play, og året man leste forsvinner.
+
+        `preload="metadata"` henter bare lengden. Blob svarer på range-requests,
+        så resten strømmes etter hvert – en time video koster ingenting før noen
+        faktisk ser på den.
+      */}
+      <video
+        controls
+        playsInline
+        preload="metadata"
+        poster={m.plakatUrl ?? undefined}
+        width={m.bredde ?? undefined}
+        height={m.hoyde ?? undefined}
+      >
         <source src={m.url} />
         Nettleseren din kan ikke spille av denne videoen.
       </video>
@@ -72,10 +88,4 @@ export function formatterDato(iso: string): string {
   const maaneder = ["januar","februar","mars","april","mai","juni","juli","august","september","oktober","november","desember"];
   const navn = maaneder[Number(maaned) - 1] ?? maaned;
   return dag ? `${Number(dag)}. ${navn} ${aar}` : `${navn} ${aar}`;
-}
-
-function formatterVarighet(sekunder: number): string {
-  const m = Math.floor(sekunder / 60);
-  const s = Math.round(sekunder % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
 }

@@ -291,6 +291,11 @@ Kjøres i nettleseren mot indeksdokumentet, så ingen nettverkskall per tastetry
 Prefiks, toleranse for skrivefeil, og både «sørlandet» og «sorlandet». Hvert
 treff viser et utdrag rundt treffordet. `/` setter markøren i feltet, Esc tømmer.
 
+**Trinn 10 — video.** Blokkvis opplasting med fremdrift per fil, plakatbilde
+hentet automatisk og byttbart for hånd, avspilling med `playsInline` og
+`preload="metadata"` mot en lese-SAS, og en advarsel før opplastingen starter når
+bitraten tyder på at klippet ikke er transkodet. Se [Video](#video).
+
 **Trinn 9 — innlogging.** Engangskode på e-post, uten Entra og uten
 Microsoft-kontoer. Sesjonen ligger i en `httpOnly`-kapsel klienten ikke kan
 lese; `krevRolle()` i `api/src/vakt.ts` sjekker den ved hvert kall og slår opp
@@ -331,10 +336,47 @@ av det eneste stedet listen kan endres.
 **Tømming over 800 filer tar flere runder.** Managed functions har en fast
 tidsgrense; svaret sier hvor mange som gjenstår, og siden ber om en runde til.
 
+## Video
+
+**Transkode klippene før de lastes opp.** Det er det ene valget i prosjektet der
+en feil får varig konsekvens: med ~11 timer ferdig klippet materiale er
+forskjellen på råfiler og transkodet 1080p omtrent 2 500 GB mot 30 GB — og en
+opplasting som tar kvelden mot en som går unna.
+
+Siden klippingen uansett gjøres for hånd, gjøres transkodingen i samme
+operasjon:
+
+```bash
+# Klipp ut 00:12:30–00:19:45 og transkode til web-vennlig 1080p
+ffmpeg -ss 00:12:30 -to 00:19:45 -i original.mov \
+  -vf "scale=-2:1080" -c:v libx264 -preset slow -crf 21 \
+  -c:a aac -b:a 128k -movflags +faststart klipp.mp4
+```
+
+- `-crf 21` gir god kvalitet for familievideo; `23` er også fullt brukbart og
+  mindre
+- `-movflags +faststart` er ikke valgfritt — uten den må hele filen lastes ned
+  før avspillingen starter
+- For digitalisert smalfilm og VHS er kilden uansett lavoppløst: bruk
+  `scale=-2:720` og `-crf 22`
+
+HandBrake gjør det samme med et grafisk grensesnitt («Fast 1080p30» er nær nok).
+
+**Appen sier fra hvis den tror du har glemt det.** Før opplastingen starter leses
+lengden på klippet, og bitraten regnes ut. Ligger den over 8 Mbit/s, holdes filen
+tilbake med tallene og et valg: ta den ut, eller last opp likevel. Det samme skjer
+hvis nettleseren ikke klarer å lese filen i det hele tatt — da kan den ikke
+spilles av på årssiden heller, og en `.mov` rett fra kameraet er ofte akkurat det.
+Grensen for én fil er 2 GB.
+
+**Plakatbildet** hentes automatisk ett sekund inn i klippet. Treffer det dårlig,
+kan du spole til et bedre bilde i medielisten og trykke «Bytt plakatbilde» —
+året må være lagret først, siden bildet hentes fra videoen slik den ligger i
+Blob. Det krever at CORS-reglene på lagringskontoen slipper gjennom `Range`;
+`infra/main.bicep` og `verktoy/lager-oppsett.mjs` setter dem.
+
 ## Hva som bevisst ikke virker ennå
 
-- **Video** — trinn 10. Blokkvis opplasting virker, men plakatbilde, avspilling
-  og advarsel om utranskodet fil gjenstår.
 - **Mobiltilpasning og tomtilstander** — trinn 11.
 
 ## Om koden

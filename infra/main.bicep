@@ -54,8 +54,10 @@ resource blobtjeneste 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01
         {
           allowedOrigins: tillatteOpphav
           allowedMethods: ['GET', 'HEAD', 'PUT', 'OPTIONS']
-          allowedHeaders: ['x-ms-blob-type', 'x-ms-blob-content-type', 'x-ms-version', 'content-type']
-          exposedHeaders: ['ETag', 'x-ms-request-id']
+          // 'range' er der for videoen: et <video> lastet med crossOrigin
+          // (som plakatvelgeren trenger) preflighter spolingen.
+          allowedHeaders: ['x-ms-blob-type', 'x-ms-blob-content-type', 'x-ms-version', 'content-type', 'range']
+          exposedHeaders: ['ETag', 'x-ms-request-id', 'Content-Range', 'Accept-Ranges', 'Content-Length', 'Content-Type']
           maxAgeInSeconds: 3600
         }
       ]

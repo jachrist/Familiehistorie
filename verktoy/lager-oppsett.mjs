@@ -9,13 +9,21 @@
  */
 import { BlobServiceClient } from "@azure/storage-blob";
 
-/** Hodene opplastingen faktisk sender. Se app/src/media/opplasting.ts. */
+/**
+ * Hodene opplastingen faktisk sender (se app/src/media/opplasting.ts), pluss
+ * `Range`.
+ *
+ * `Range` er der for videoen. Et <video>-element som lastes med `crossOrigin`
+ * – nødvendig for at plakatvelgeren skal få hente et bilde ut av lerretet –
+ * gjør spolingen til et kryssopphav-kall med preflight, og uten `Range` i
+ * listen avvises den. Da kan man verken spole eller velge plakatbilde.
+ */
 export const CORS_REGLER = [
   {
     allowedOrigins: "http://localhost:4280,http://127.0.0.1:4280,http://localhost:5173,http://127.0.0.1:5173",
     allowedMethods: "GET,HEAD,PUT,OPTIONS",
-    allowedHeaders: "x-ms-blob-type,x-ms-blob-content-type,x-ms-version,content-type",
-    exposedHeaders: "ETag,x-ms-request-id",
+    allowedHeaders: "x-ms-blob-type,x-ms-blob-content-type,x-ms-version,content-type,range",
+    exposedHeaders: "ETag,x-ms-request-id,Content-Range,Accept-Ranges,Content-Length,Content-Type",
     maxAgeInSeconds: 3600,
   },
 ];

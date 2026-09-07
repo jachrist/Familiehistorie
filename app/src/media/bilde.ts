@@ -32,7 +32,11 @@ function skaler(kilde: ImageBitmap, maksKant: number) {
   };
 }
 
-function tilBlob(lerret: HTMLCanvasElement, type: string, kvalitet: number): Promise<Blob> {
+export function lerretTilBlob(
+  lerret: HTMLCanvasElement,
+  type: string,
+  kvalitet: number
+): Promise<Blob> {
   return new Promise((loes, avvis) => {
     lerret.toBlob(
       (b) => (b ? loes(b) : avvis(new Error("Klarte ikke komprimere bildet."))),
@@ -50,7 +54,7 @@ async function render(kilde: ImageBitmap, maksKant: number, type: string, kvalit
   const ctx = lerret.getContext("2d");
   if (!ctx) throw new Error("Nettleseren støtter ikke canvas.");
   ctx.drawImage(kilde, 0, 0, bredde, hoyde);
-  return { blob: await tilBlob(lerret, type, kvalitet), bredde, hoyde };
+  return { blob: await lerretTilBlob(lerret, type, kvalitet), bredde, hoyde };
 }
 
 /** Nettleserstøtte for WebP varierer; JPEG er tryggere som fallback. */
@@ -77,45 +81,5 @@ export async function behandleBilde(fil: File): Promise<Behandletbilde> {
     };
   } finally {
     kilde.close();
-  }
-}
-
-/** Første brukbare bilde fra en videofil, til plakatbilde. */
-export async function plakatFraVideo(fil: File): Promise<{ blob: Blob; varighet: number } | undefined> {
-  const url = URL.createObjectURL(fil);
-  const video = document.createElement("video");
-  video.preload = "metadata";
-  video.muted = true;
-  video.src = url;
-
-  try {
-    await new Promise<void>((loes, avvis) => {
-      video.onloadeddata = () => loes();
-      video.onerror = () => avvis(new Error("Klarte ikke lese videoen."));
-      setTimeout(() => avvis(new Error("Tidsavbrudd ved lesing av video.")), 15_000);
-    });
-
-    // Ett sekund inn: første bilde er ofte svart.
-    video.currentTime = Math.min(1, (video.duration || 2) / 2);
-    await new Promise<void>((loes) => {
-      video.onseeked = () => loes();
-      setTimeout(loes, 4_000);
-    });
-
-    const lerret = document.createElement("canvas");
-    const forhold = Math.min(1, MAKS_KANT / Math.max(video.videoWidth, video.videoHeight));
-    lerret.width = Math.round(video.videoWidth * forhold);
-    lerret.height = Math.round(video.videoHeight * forhold);
-    const ctx = lerret.getContext("2d");
-    if (!ctx || lerret.width === 0) return undefined;
-    ctx.drawImage(video, 0, 0, lerret.width, lerret.height);
-
-    return { blob: await tilBlob(lerret, "image/jpeg", 0.8), varighet: video.duration || 0 };
-  } catch {
-    // Uten plakatbilde viser <video> bare en tom flate. Ikke verdt å stoppe
-    // opplastingen for.
-    return undefined;
-  } finally {
-    URL.revokeObjectURL(url);
   }
 }

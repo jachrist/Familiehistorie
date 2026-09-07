@@ -677,6 +677,16 @@ er nær nok).
 hentet fra første bildefelt eller valgt manuelt, og avspilling med vanlig `<video>` mot
 en lese-SAS-URL. Blob støtter range-requests, så spoling virker.
 
+Plakatvelgeren laster videoen med `crossOrigin`, ellers kan ikke bildet hentes ut av
+lerretet. Det gjør spolingen til et kryssopphav-kall med preflight, og derfor må CORS-reglene
+på lagringskontoen slippe gjennom `Range` — uten det virker verken spoling eller
+plakatvelger.
+
+Advarselen om utranskodet fil slår inn to steder: når bitraten (størrelse delt på lengde)
+overstiger 8 Mbit/s, og når nettleseren ikke klarer å lese filen i det hele tatt. Det siste
+er det viktigste tilfellet i praksis: en `.mov` rett fra kameraet er ofte i et format ingen
+nettleser kan spille av, og da ville den blitt liggende usynlig i arkivet.
+
 **Grense i MVP: 2 GB per fil.** Med anbefalt transkoding tilsvarer det nesten en time
 sammenhengende video — langt mer enn noe enkeltklipp bør være. Redigerings-GUI-et
 advarer hvis en fil er mistenkelig stor for lengden sin, altså sannsynligvis ikke
@@ -813,7 +823,7 @@ billig forsikring mot at det lastes opp utranskodet video.
 | 7 | **Masseopplasting**: kø, parallellitet, fremdrift, nedskalering, EXIF, bildetekstliste |
 | 8 | Søk med MiniSearch og filtrering av årslisten |
 | 9 | **OTP-innlogging**: kode på e-post, sesjon, `krevRolle()` i alle endepunkter, tilgangsliste, rate-limiting, private media-SAS |
-| 10 | Video: blokkvis opplasting, plakatbilde, avspilling, advarsel om utranskodet fil |
+| 10 | Video: blokkvis opplasting, plakatbilde, avspilling, advarsel om utranskodet fil ✔ |
 | 11 | Mobiltilpasning, tomtilstander, feilmeldinger på norsk, sikkerhetskopijobb |
 
 Rekkefølgen er valgt slik at det finnes noe kjørbart å se på fra og med trinn 4.
