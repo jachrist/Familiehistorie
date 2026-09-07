@@ -147,6 +147,27 @@ npm run seed:sky -- --redaktoer=din.adresse@domenet.no
 
 Utelater du `--redaktoer`, spør skriptet.
 
+### Tømme testdataene før ekte innhold
+
+Eksempelårene fra `seed` skal ut før familiens materiale legges inn.
+
+```bash
+npm run tom:sky                      # viser hva som finnes, sletter ingenting
+npm run tom:sky -- --slett           # årsdokumenter og indeks
+npm run tom:sky -- --slett --media   # også bilder og video
+```
+
+**Tørrkjøring er standard**, og med et skall som har TTY må antallet skrives
+inn for å bekrefte. `felter.json` og `tilgang.json` røres aldri — det første er
+oppsett, det andre er veien inn.
+
+Mediefiler følger ikke med når årsdokumentene slettes med mindre `--media` er
+med. Det er samme prinsipp som i appen: å fjerne et bilde fra et år skal være
+angrbart, så blobben blir liggende til noen rydder med vilje.
+
+I Azure er versjonering og soft delete på, så en sletting kan angres i 30
+dager. Lokalt mot Azurite er den endelig.
+
 ### Hvem står på tilgangslisten?
 
 Den som seedet listen er eneste som kan logge inn. Skriver du inn en annen

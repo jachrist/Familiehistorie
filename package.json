@@ -10,6 +10,8 @@
     "dev": "npm run build --prefix api && node verktoy/dev.mjs",
     "seed": "node verktoy/seed.mjs",
     "seed:sky": "node verktoy/seed-sky.mjs",
+    "tom": "node verktoy/tom.mjs",
+    "tom:sky": "node verktoy/tom-sky.mjs",
     "build": "npm run build --prefix api && npm run build --prefix app",
     "typecheck": "npm run typecheck --prefix api && npm run typecheck --prefix app",
     "clean": "node -e \"for (const m of ['app/dist','api/dist','.azurite','.swa']) require('node:fs').rmSync(m,{recursive:true,force:true})\"",

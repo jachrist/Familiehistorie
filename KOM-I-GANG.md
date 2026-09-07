@@ -202,6 +202,8 @@ den dagen noen legger inn en. Derfor lages den av `npm run installer` fra
 | `npm run dev:enkel` | Reservevei: Azurite + lokal API-tjener + Vite, uten `func` og SWA CLI |
 | `npm run seed` | Legger eksempeldata i Azurite |
 | `npm run seed:sky` | Samme, men mot Azure (henter nøkkel via `az`) |
+| `npm run tom` | Viser hva som ville blitt slettet av innhold i Azurite |
+| `npm run tom:sky` | Samme mot Azure. `-- --slett` utfører, `--media` tar med filene |
 | `npm run proev` | Røykprøve av API-et mot Azurite |
 | `npm run proev:epost` | Prøver e-postutsendingen mot en stubb, uten å sende noe |
 | `npm run build` | Bygger `api/` og `app/` |
