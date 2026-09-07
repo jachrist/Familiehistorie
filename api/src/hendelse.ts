@@ -62,3 +62,27 @@ export async function sisteUtfall(): Promise<Utfall | null> {
     return null;
   }
 }
+
+/**
+ * Virker Table Storage i det hele tatt?
+ *
+ * Kodebestillingen treffer tabellen to ganger – rate-limiteren og lagring av
+ * koden – **før** e-posten forsøkes. Feiler den, kommer man aldri til
+ * utsendingen, og både Resends logg og postkassen står tomme uten at noe
+ * peker på hvorfor.
+ *
+ * `lager: true` i /api/helse sier bare at *Blob* svarer. Dette er den andre
+ * halvparten. Returnerer `null` når alt er i orden, ellers grunnen.
+ */
+export async function sjekkTabellager(): Promise<string | null> {
+  try {
+    const klient = await tabell(TABELL.sperrer);
+    await klient.getEntity<Rad>(PARTISJON, "finnes-neppe").catch((e: unknown) => {
+      // «Fant ikke raden» er et vellykket svar her: tabellen er tilgjengelig.
+      if (!erIkkeFunnet(e)) throw e;
+    });
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message.slice(0, 200) : "ukjent feil";
+  }
+}

@@ -1,7 +1,7 @@
 import { app, type HttpResponseInit } from "@azure/functions";
 import type { Tilgangsliste } from "../../../delt/typer.js";
 import { epostErSattOpp } from "../epost.js";
-import { sisteUtfall } from "../hendelse.js";
+import { sisteUtfall, sjekkTabellager } from "../hendelse.js";
 import { CONTAINER, STI, lesJson } from "../lager.js";
 import { json } from "../svar.js";
 
@@ -37,6 +37,7 @@ app.http("helse", {
   handler: async (): Promise<HttpResponseInit> => {
     const svar = {
       lager: false,
+      tabellager: false,
       tilgangsliste: false,
       antallPersoner: 0,
       antallRedaktoerer: 0,
@@ -65,6 +66,17 @@ app.http("helse", {
     } catch (e) {
       svar.merknader.push(
         `Fikk ikke lest fra lagringskontoen: ${e instanceof Error ? e.message : "ukjent feil"}`
+      );
+    }
+
+    // Tabellen brukes av rate-limiteren og av kodelagringen, begge *før*
+    // e-posten sendes. Svarer den ikke, kommer ingen kode fram uansett hvor
+    // riktig e-postoppsettet er.
+    const tabellfeil = await sjekkTabellager();
+    svar.tabellager = tabellfeil === null;
+    if (tabellfeil) {
+      svar.merknader.push(
+        `Table Storage svarer ikke: ${tabellfeil}. Ingen engangskoder kan lages.`
       );
     }
 
