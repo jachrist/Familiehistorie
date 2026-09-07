@@ -1301,3 +1301,13 @@ mark {
     width: 100%;
   }
 }
+
+.koe-detalj {
+  grid-column: 1 / -1;
+  color: var(--blekk-matt);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.koe-detalj-hoy {
+  color: var(--varsel);
+}

@@ -72,11 +72,16 @@ export function vurderTranskoding(bytes: number, meta?: Videometa): Videovurderi
   }
 
   const varighet = meta.varighet;
+  // Bitraten regnes ut så snart det finnes en lengde å dele på – også for korte
+  // klipp. Den *vurderes* ikke der, men den vises, og det er nyttig i seg selv:
+  // det er slik man ser hva klippeverktøyet sitt faktisk leverer.
+  const mbit = varighet > 0 ? (bytes * 8) / varighet / 1_000_000 : null;
+
   if (!varighet || varighet < MINSTE_VARIGHET) {
     const mistenkelig = bytes > MISTENKELIG_UTEN_VARIGHET;
     return {
       mistenkelig,
-      mbit: null,
+      mbit,
       varighet: varighet || null,
       begrunnelse: mistenkelig
         ? `Filen er ${formatterBytes(bytes)}, og lengden lot seg ikke lese. Er den transkodet?`
@@ -84,15 +89,14 @@ export function vurderTranskoding(bytes: number, meta?: Videometa): Videovurderi
     };
   }
 
-  const mbit = (bytes * 8) / varighet / 1_000_000;
-  const mistenkelig = bytes > MINSTE_STORRELSE && mbit > ANBEFALT_MBIT;
+  const mistenkelig = bytes > MINSTE_STORRELSE && mbit! > ANBEFALT_MBIT;
 
   return {
     mistenkelig,
     mbit,
     varighet,
     begrunnelse: mistenkelig
-      ? `${formatterBytes(bytes)} på ${formatterVarighet(varighet)} er ${tall(mbit, 0)} Mbit/s. ` +
+      ? `${formatterBytes(bytes)} på ${formatterVarighet(varighet)} er ${tall(mbit!, 1)} Mbit/s. ` +
         `Transkodet 1080p ligger rundt 6. Filen er trolig ikke transkodet.`
       : "",
   };
@@ -192,4 +196,20 @@ async function medVideoelement<T>(
     video.src = "";
     URL.revokeObjectURL(url);
   }
+}
+
+/**
+ * `1280×720 · 0:40 · 5,9 Mbit/s`.
+ *
+ * Vises for hver videofil i opplastingskøen, ikke bare de som blir stoppet.
+ * Uten den ser man bare at det gikk bra, og lærer aldri hva klippeverktøyet
+ * sitt faktisk leverer – som er nettopp det man trenger å vite første gang man
+ * setter opp en eksport.
+ */
+export function beskrivVideo(vurdering: Videovurdering, meta?: Videometa): string {
+  const deler: string[] = [];
+  if (meta?.bredde && meta.hoyde) deler.push(`${meta.bredde}×${meta.hoyde}`);
+  if (vurdering.varighet) deler.push(formatterVarighet(vurdering.varighet));
+  if (vurdering.mbit !== null) deler.push(`${tall(vurdering.mbit, 1)} Mbit/s`);
+  return deler.join(" · ");
 }

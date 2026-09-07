@@ -4,7 +4,15 @@ import { api } from "../api/klient.js";
 import { behandleBilde } from "../media/bilde.js";
 import { lesExif, vanligsteAar } from "../media/exif.js";
 import { iParallell, lastOpp } from "../media/opplasting.js";
-import { lesVideometa, plakatFraVideo, vurderTranskoding, type Videovurdering } from "../media/video.js";
+import {
+  ANBEFALT_MBIT,
+  beskrivVideo,
+  lesVideometa,
+  plakatFraVideo,
+  vurderTranskoding,
+  type Videometa,
+  type Videovurdering,
+} from "../media/video.js";
 
 /** MIME-typene API-et utsteder skrive-SAS for. */
 const GODTATT = [
@@ -23,6 +31,7 @@ interface Post {
   feil?: string;
   aar?: number;
   vurdering?: Videovurdering;
+  meta?: Videometa;
 }
 
 interface Props {
@@ -81,8 +90,11 @@ export function Opplastingskoe({ aar, onFerdig, onAarsforslag, nesteRekkefolge }
           if (post.fil.type.startsWith("video/")) {
             const meta = await lesVideometa(post.fil);
             const vurdering = vurderTranskoding(post.fil.size, meta);
+            // Tallene noteres alltid, ikke bare når de er et problem: da kan man
+            // se hva eksporten fra klippeverktøyet faktisk ble.
+            oppdater(post.nokkel, { vurdering, meta });
             if (vurdering.mistenkelig && !tvunget) {
-              oppdater(post.nokkel, { status: "bekreft", vurdering });
+              oppdater(post.nokkel, { status: "bekreft" });
               return undefined;
             }
             const plakat = await plakatFraVideo(post.fil, meta);
@@ -269,6 +281,18 @@ export function Opplastingskoe({ aar, onFerdig, onAarsforslag, nesteRekkefolge }
                 {p.status === "ferdig" && "ferdig"}
                 {p.status === "feil" && (p.feil ?? "feilet")}
               </span>
+              {p.vurdering && beskrivVideo(p.vurdering, p.meta) && (
+                <span
+                  className={`koe-detalj${
+                    p.vurdering.mbit !== null && p.vurdering.mbit > ANBEFALT_MBIT
+                      ? " koe-detalj-hoy"
+                      : ""
+                  }`}
+                >
+                  {beskrivVideo(p.vurdering, p.meta)}
+                </span>
+              )}
+
               {p.status === "laster" && (
                 <span className="koe-stolpe">
                   <span style={{ width: `${p.andel * 100}%` }} />

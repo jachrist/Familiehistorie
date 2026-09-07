@@ -370,6 +370,11 @@ ffmpeg -ss 00:12:30 -to 00:19:45 -i original.mov \
 
 HandBrake gjør det samme med et grafisk grensesnitt («Fast 1080p30» er nær nok).
 
+**Køen viser hva hver videofil faktisk er** — oppløsning, lengde og bitrate,
+også for filene som går rett gjennom. Det er slik du ser hva klippeverktøyet
+ditt leverer, første gang du setter opp en eksport. Verktøy som Clipchamp lar
+deg ikke velge bitrate selv; da er tallet i køen eneste måten å vite hva du fikk.
+
 **Appen sier fra hvis den tror du har glemt det.** Før opplastingen starter leses
 lengden på klippet, og bitraten regnes ut. Ligger den over 8 Mbit/s, holdes filen
 tilbake med tallene og et valg: ta den ut, eller last opp likevel. Det samme skjer
