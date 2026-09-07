@@ -1,29 +1,35 @@
-import { app, type HttpResponseInit } from "@azure/functions";
+import { app, type HttpRequest, type HttpResponseInit } from "@azure/functions";
 import type { Tilgangsliste } from "../../../delt/typer.js";
 import { epostErSattOpp } from "../epost.js";
 import { sisteUtfall, sjekkTabellager } from "../hendelse.js";
 import { CONTAINER, STI, lesJson } from "../lager.js";
 import { json } from "../svar.js";
+import { harRolle } from "../tilgang.js";
+import { innlogget } from "../vakt.js";
 
 /**
  * Er oppsettet på plass?
  *
  * Uten innlogging, med vilje: den som ikke kommer inn, er nettopp den som
- * trenger svaret. Endepunktet svarer bare ja/nei om hvorvidt hver del *er
- * konfigurert* – aldri med verdier, aldri med hvem som står på tilgangslisten.
+ * trenger svaret. For en som ikke er logget inn er svaret bare ja/nei om
+ * hvorvidt hver del *er konfigurert* – aldri med verdier, og aldri med hvem som
+ * står på tilgangslisten.
  *
  * Bakgrunnen er at /api/auth/kode alltid svarer 202 for ikke å røpe hvem som er
  * i familien. Det er riktig, men gjør at et oppsett som mangler ser nøyaktig ut
  * som et vellykket kall. Da må svaret finnes et annet sted.
+ *
+ * En innlogget redaktør får i tillegg de maskerte adressene og utfallet av
+ * siste kodebestilling. De sto tidligere i det åpne svaret, fordi den offentlige
+ * diagnosesiden trengte dem. Den siden er fjernet, og da er det ingen grunn til
+ * at hvem som helst skal kunne telle familiemedlemmer.
  */
+
 /**
  * `jan.christiansen@jcconsulting.no` → `ja***@jcconsulting.no`.
  *
- * Nok til at man kjenner igjen sin egen adresse, for lite til at noen kan
- * gjette seg til andres. Det er en bevisst oppmyking av regelen om at
- * endepunktene ikke røper hvem som står på listen: uten den kan en som er
- * låst ute ikke se om det er adressen eller noe annet som er feil, og da må
- * svaret hentes fra en logg som kan ligge timer etter.
+ * Nok til at man kjenner igjen sin egen adresse, for lite til at noen kan gjette
+ * seg til andres – også en redaktør ser bare dette.
  */
 function masker(epost: string): string {
   const [lokal = "", domene = ""] = epost.split("@");
@@ -34,23 +40,24 @@ app.http("helse", {
   methods: ["GET"],
   route: "helse",
   authLevel: "anonymous",
-  handler: async (): Promise<HttpResponseInit> => {
+  handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
+    const person = await innlogget(req).catch(() => undefined);
+    const erRedaktoer = person ? harRolle(person, "redaktoer") : false;
+
     const svar = {
       lager: false,
       tabellager: false,
       tilgangsliste: false,
       antallPersoner: 0,
       antallRedaktoerer: 0,
-      adresser: [] as string[],
       epostOppsett: epostErSattOpp(),
       avsenderdomene: process.env.EPOST_AVSENDER?.split("@")[1] ?? null,
       sesjonsnokkel: (process.env.SESJON_HEMMELIGHET ?? "").trim().length >= 32,
       miljo: process.env.MILJO ?? "drift",
-      // Hva som faktisk skjedde sist noen ba om en kode. Svarer i sanntid, i
-      // motsetning til Application Insights.
-      sisteKodebestilling: await sisteUtfall(),
       merknader: [] as string[],
     };
+
+    let adresser: string[] = [];
 
     try {
       const lest = await lesJson<Tilgangsliste>(CONTAINER.innhold, STI.tilgang);
@@ -61,7 +68,7 @@ app.http("helse", {
         svar.antallRedaktoerer = lest.verdi.personer.filter((p) =>
           p.roller.includes("redaktoer")
         ).length;
-        svar.adresser = lest.verdi.personer.map((p) => masker(p.epost));
+        adresser = lest.verdi.personer.map((p) => masker(p.epost));
       }
     } catch (e) {
       svar.merknader.push(
@@ -93,10 +100,21 @@ app.http("helse", {
       );
     }
 
+    const ok = svar.merknader.length === 0;
+
     // Alltid 200, også når noe mangler. Et diagnoseendepunkt som svarer 5xx er
     // lett å miste bak en proxy eller et CDN som bytter ut kroppen med sin
     // egen tomme feilside – og da forsvinner nettopp svaret man kom for.
     // Verdien står i `ok` og i merknadene i stedet.
-    return json({ ok: svar.merknader.length === 0, ...svar });
+    if (!erRedaktoer) return json({ ok, ...svar });
+
+    return json({
+      ok,
+      ...svar,
+      adresser,
+      // Hva som faktisk skjedde sist noen ba om en kode. Svarer i sanntid, i
+      // motsetning til Application Insights.
+      sisteKodebestilling: await sisteUtfall(),
+    });
   },
 });

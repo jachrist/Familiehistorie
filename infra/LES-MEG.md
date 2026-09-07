@@ -372,24 +372,31 @@ traces
 | order by timestamp desc
 ```
 
-### Diagnosesiden
+### Når noe ikke svarer
 
 ```
-https://<adressen-din>/diagnose.html
+https://<adressen-din>/api/ping     # ren tekst, ingen avhengigheter
+https://<adressen-din>/api/helse    # er oppsettet på plass?
 ```
 
-Kaller `/api/ping`, `/api/helse`, `/api/meg` og `/api/indeks` fra nettleseren og
-viser **statuskoden og kroppen på skjermen**. Ren statisk HTML, så den virker
-også når API-et ikke gjør det.
+`/api/ping` er dependency-fri og svarer `ok`. Kommer det ingenting, er det ikke
+oppsettet som er galt – da starter ikke funksjonsverten i det hele tatt, og det
+er der du skal lete. En **tom kropp** er signaturen på nettopp det.
 
-Den finnes fordi Safari laster ned `text/plain` i stedet for å vise det, og
-fordi en nedlastet tom fil ikke sier hva som gikk galt. På telefon og nettbrett
-er dette raskeste vei til et svar; `curl -i` gjør samme nytten der du har et
-skall.
+`/api/helse` svarer alltid `200`, også når noe mangler; verdien står i `ok` og i
+`merknader`. Uten innlogging får du bare ja/nei om hvorvidt hver del er
+konfigurert. Er du logget inn som redaktør, får du i tillegg de maskerte
+adressene på tilgangslisten og utfallet av siste kodebestilling – det siste er
+svaret på «hvorfor kom det ingen e-post», i sanntid, i motsetning til
+Application Insights.
 
-Grønn statuskode betyr «svarte som forventet», ikke «alt er bra»: 401 fra
-`/api/meg` er riktig svar når ingen er innlogget. Tomme kropper markeres
-eksplisitt — det er signaturen på at funksjonsverten ikke starter.
+Det fantes en åpen diagnoseside på `/diagnose.html` mens dette ble satt opp. Den
+er fjernet: den viste maskerte adresser til hvem som helst, og var laget for et
+problem som er løst.
+
+På iPad laster Safari ned `text/plain` i stedet for å vise det. `/api/helse`
+svarer JSON og vises i vinduet; for `/api/ping` er en nedlastet fil på to tegn
+like fullt et svar – det er den tomme filen som betyr noe.
 
 ### Loggen
 

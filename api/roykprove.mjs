@@ -231,6 +231,31 @@ await proev("PUT tilgang med duplikat adresse → 422", 422, () =>
 await proev("PUT tilgang med feil If-Match → 412", 412, () =>
   finn("PUT", "tilgang").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": '"0x8DFEIL"' }, body: { personer: [{ epost: REDAKTOER, navn: "Prøve Redaktør", roller: ["familie", "redaktoer"] }] } })));
 
+console.log("\nHelsesjekk");
+const helseAapen = await proev("GET /api/helse uten kapsel", 200, () =>
+  finn("GET", "helse").handler(req({ som: "ingen" })));
+const rroeperIngenting =
+  helseAapen.jsonBody?.adresser === undefined &&
+  helseAapen.jsonBody?.sisteKodebestilling === undefined;
+console.log(`  ${rroeperIngenting ? "ok  " : "FEIL"}  ${"Uinnlogget ser verken adresser eller utfall".padEnd(46)}`);
+if (!rroeperIngenting) { feilet++; console.log("         →", Object.keys(helseAapen.jsonBody ?? {}).join(", ")); }
+const harOppsett = typeof helseAapen.jsonBody?.ok === "boolean" && Array.isArray(helseAapen.jsonBody?.merknader);
+console.log(`  ${harOppsett ? "ok  " : "FEIL"}  ${"Uinnlogget ser fortsatt oppsettet".padEnd(46)}`);
+if (!harOppsett) feilet++;
+
+const helseFamilie = await proev("GET /api/helse som familie", 200, () =>
+  finn("GET", "helse").handler(req({ som: "familie" })));
+const familieSerIkke = helseFamilie.jsonBody?.adresser === undefined;
+console.log(`  ${familieSerIkke ? "ok  " : "FEIL"}  ${"Familie uten redaktørrolle ser ikke adresser".padEnd(46)}`);
+if (!familieSerIkke) feilet++;
+
+const helseRedaktoer = await proev("GET /api/helse som redaktør", 200, () =>
+  finn("GET", "helse").handler(req({})));
+const maskert = (helseRedaktoer.jsonBody?.adresser ?? []).every((a) => a.includes("***@"));
+const serAdresser = (helseRedaktoer.jsonBody?.adresser ?? []).length === 2 && maskert;
+console.log(`  ${serAdresser ? "ok  " : "FEIL"}  ${"Redaktør ser adressene, maskert".padEnd(46)}`);
+if (!serAdresser) { feilet++; console.log("         →", helseRedaktoer.jsonBody?.adresser); }
+
 console.log("\nSikkerhetskopi");
 const kopi = await proev("POST /api/vedlikehold/sikkerhetskopi", 200, () =>
   finn("POST", "vedlikehold/sikkerhetskopi").handler(req({ method: "POST", headers: JSONH, body: {} })));
