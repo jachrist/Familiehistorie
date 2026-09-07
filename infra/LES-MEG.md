@@ -259,32 +259,50 @@ Ingen ny utrulling nødvendig — appinnstillinger slår inn på neste kall.
 
 ### DNS for eget avsenderdomene
 
-Resend viser de eksakte verdiene under **Domains → Add domain**. Formen er
-denne, med `historie.mqx.no` som eksempel på domenet du verifiserer:
+Resend viser de eksakte verdiene under **Domains → Add domain**. Fire
+oppføringer, med `historie.mqx.no` som eksempel på domenet du verifiserer:
 
 | Type | Navn | Verdi | Hva den gjør |
 |---|---|---|---|
-| `MX` | `send.historie.mqx.no` | `feedback-smtp.<region>.amazonses.com`, prioritet 10 | Tar imot sprett og klager |
-| `TXT` | `send.historie.mqx.no` | `v=spf1 include:amazonses.com ~all` | SPF: sier hvem som får sende |
-| `TXT` | `resend._domainkey.historie.mqx.no` | `p=MIGfMA0…` (lang nøkkel) | DKIM: signerer meldingene |
-| `TXT` | `_dmarc.historie.mqx.no` | `v=DMARC1; p=none;` | Valgfri, men anbefalt |
+| `TXT` | `resend._domainkey.historie.mqx.no` | `p=MIGfMA0…` (lang nøkkel) | DKIM: den offentlige nøkkelen mottakeren sjekker signaturen mot |
+| `CNAME` | `send.historie.mqx.no` | `send.<noe>.mta.net` | SPF: peker videre til Resends liste over utsendere |
+| `CNAME` | `rsend.historie.mqx.no` | `rsend-eu…mta.net` | Returadressen: hit går sprett og klager |
+| `TXT` | `_dmarc.historie.mqx.no` | `v=DMARC1; p=none;` | Valgfri: sier hva mottakeren skal gjøre når en sjekk ryker |
+
+`p=none` betyr «rapporter, men ikke avvis». Riktig å starte med — strammes til
+`quarantine` eller `reject` først når du ser at alt går gjennom.
+
+**«Enable Receiving» lar du stå av.** Den er for innkommende post til domenet.
+Vi sender bare.
 
 **Kopier verdiene fra Resend, ikke herfra.** DKIM-nøkkelen er unik per domene, og
-`<region>` avhenger av hvor kontoen din ligger. Tabellen viser hvilke *typer*
-oppføringer du skal vente deg, så du kan se om noe mangler.
+vertsnavnene i CNAME-ene avhenger av hvilken region kontoen ligger i. Tabellen
+viser hvilke *typer* oppføringer du skal vente deg, så du kan se om noe mangler.
 
-**Mange DNS-paneler legger på domenet selv.** Skriv da bare `send` og
-`resend._domainkey`, ikke hele navnet — ellers ender du med
-`send.historie.mqx.no.historie.mqx.no`.
+**Navnene er relative til sonen.** Ligger DNS-sonen på `mqx.no` mens domenet du
+verifiserer er `historie.mqx.no`, skriver du `send.historie`,
+`rsend.historie`, `resend._domainkey.historie` og `_dmarc.historie` — akkurat
+slik Resend viser dem. Panelet legger på `.mqx.no` selv. Skriver du hele navnet,
+ender du med `send.historie.mqx.no.mqx.no`.
 
 **Én ting som kan kollidere.** Skal samme vertsnavn også være nettstedets adresse
 (CNAME mot Static Web App-en), er det verdt å vite at et navn med CNAME ikke kan
 ha andre oppføringer. Her går det bra: alle e-postoppføringene ligger på
-*under*navn (`send.`, `resend._domainkey.`, `_dmarc.`), ikke på selve
+*under*navn (`send.`, `rsend.`, `resend._domainkey.`, `_dmarc.`), ikke på selve
 `historie.mqx.no`. Men legger du en TXT der senere, får du problemer.
 
 Verifiseringen tar fra minutter til et døgn. Resend viser status per oppføring,
 så du ser hvilken som mangler i stedet for å gjette.
+
+**Når domenet er verifisert**, bytt avsenderadressen — det er hele poenget med
+øvelsen. `onboarding@resend.dev` går bare til din egen adresse; med eget domene
+kan hele familien logge inn:
+
+```bash
+az staticwebapp appsettings set \
+  --name famhist-web \
+  --setting-names EPOST_AVSENDER="Familiehistorie <ikke-svar@historie.mqx.no>"
+```
 
 ### Når koden ikke kommer fram
 
