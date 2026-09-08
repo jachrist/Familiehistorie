@@ -143,6 +143,35 @@ export interface TilgangslisteMedEtag extends Tilgangsliste {
   etag: string;
 }
 
+/**
+ * Ett opptak i registeret.
+ *
+ * Fulle, uklippede opptak ligger i et SharePoint-bibliotek og spilles av der.
+ * Registeret er laget for at selve delingslenken ikke skal stå i årsteksten:
+ * i teksten står `/api/opptak/<id>`, og bare den som er logget inn blir sendt
+ * videre. Da kan lenken byttes ett sted i stedet for i hver årsside den er
+ * nevnt, og en som ikke har tilgang ser den aldri.
+ */
+export interface Opptak {
+  /** Kortnavnet som står i lenken. Små bokstaver, tall og bindestrek. */
+  id: string;
+  tittel: string;
+  /** Delingslenken fra SharePoint. */
+  url: string;
+  /** Sekunder inn i opptaket avspillingen skal starte. */
+  start?: number | null;
+  /** Fritekst til den som vedlikeholder registeret. Vises ingen andre steder. */
+  notat?: string;
+}
+
+export interface Opptaksregister {
+  opptak: Opptak[];
+}
+
+export interface OpptaksregisterMedEtag extends Opptaksregister {
+  etag: string;
+}
+
 /** Svaret fra GET /api/meg. 401 når ingen er innlogget. */
 export interface Innlogget {
   epost: string;
@@ -178,6 +207,7 @@ export interface Sikkerhetskopi {
 export interface Sikkerhetskopiinnhold extends Omit<Sikkerhetskopi, "bytes"> {
   felter: Feltskjema | null;
   tilgang: Tilgangsliste | null;
+  opptak: Opptaksregister | null;
   aar: Aarsdokument[];
   mediefiler: { sti: string; bytes: number }[];
 }

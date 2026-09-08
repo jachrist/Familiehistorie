@@ -107,6 +107,20 @@ export function Admin() {
       </section>
 
       <section className="kort admin-kort">
+        <h2>Opptak</h2>
+        <p className="admin-hjelp">
+          Fulle opptak som ligger i SharePoint og spilles av der. Registeret gjør
+          at delingslenken ikke trenger å stå i årsteksten – der står en kort
+          lenke som bare virker for innloggede, og som kan byttes ett sted.
+        </p>
+        <div className="admin-handlinger">
+          <Link to="/opptak" className="knapp">
+            Åpne registeret
+          </Link>
+        </div>
+      </section>
+
+      <section className="kort admin-kort">
         <h2>Sikkerhetskopi</h2>
         <p className="admin-hjelp">
           Kopien inneholder alle årene, feltskjemaet og tilgangslisten. Bildene og

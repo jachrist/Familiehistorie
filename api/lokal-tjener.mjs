@@ -109,7 +109,14 @@ const tjener = createServer(async (rq, rs) => {
       error: console.error,
       warn: console.warn,
     });
-    const hoder = { "content-type": "application/json", ...(svar?.headers ?? {}) };
+    // Nøklene settes til små bokstaver før de slås sammen. HTTP-hoder er
+    // case-insensitive, men et JavaScript-objekt er det ikke: uten dette ga et
+    // svar med «Content-Type» to content-type-hoder, og nettleseren tok den
+    // første – altså JSON, uansett hva handleren mente.
+    const hoder = { "content-type": "application/json" };
+    for (const [navn, verdi] of Object.entries(svar?.headers ?? {})) {
+      hoder[navn.toLowerCase()] = verdi;
+    }
     rs.writeHead(svar?.status ?? 200, hoder);
     rs.end(svar?.jsonBody === undefined ? (svar?.body ?? "") : JSON.stringify(svar.jsonBody));
   } catch (e) {

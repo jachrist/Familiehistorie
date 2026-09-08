@@ -270,6 +270,8 @@ livssyklusregler. Static Web App på gratisplanen.
 | `POST /api/auth/kode` · `POST /api/auth/verifiser` | Engangskode og innlogging |
 | `GET /api/meg` · `POST /api/auth/logg-ut` | Hvem er innlogget, og utlogging |
 | `GET /api/tilgang` · `PUT /api/tilgang` | Tilgangslisten |
+| `GET /api/opptak` · `PUT /api/opptak` | Opptaksregisteret (redaktør) |
+| `GET /api/opptak/{id}` | Sender en innlogget videre til opptaket i SharePoint |
 
 **Trinn 4 — forsiden.** Årsliste gruppert på tiår, utfolding på stedet,
 permalenker på `/aar/1972` som ruller året til syne ved innlasting.
@@ -387,6 +389,53 @@ kan du spole til et bedre bilde i medielisten og trykke «Bytt plakatbilde» —
 året må være lagret først, siden bildet hentes fra videoen slik den ligger i
 Blob. Det krever at CORS-reglene på lagringskontoen slipper gjennom `Range`;
 `infra/main.bicep` og `verktoy/lager-oppsett.mjs` setter dem.
+
+## Opptak i SharePoint
+
+Fulle, uklippede opptak hører ikke hjemme i mediegalleriet. De er store, ofte i
+formater nettleseren ikke spiller av, og SharePoints egen avspiller gjør en
+bedre jobb med dem enn en `<video>`-tag. Men **delingslenken skal ikke stå i
+årsteksten.**
+
+To grunner. En «alle med lenken»-lenke *er* legitimasjonen — den som har
+adressen, kommer inn — og står den i sidekilden, ligger den der for enhver som
+får tak i siden. Og en delingslenke kan utløpe eller trekkes tilbake; står den i
+teksten, må hver årsside som nevner opptaket redigeres.
+
+Registeret under `/opptak` løser begge. Der ligger delingslenken, og i teksten
+står i stedet:
+
+```
+/api/opptak/bryllupet-i-vang-kirke
+```
+
+Endepunktet krever innlogging og sender deg videre. Byttes lenken, endres den
+ett sted.
+
+| Felt | Hva det er |
+|---|---|
+| Tittel | Bare til deg. Id-en lages automatisk av den |
+| Delingslenke | URL-en fra SharePoint, slik du kopierte den |
+| Id | Det som står i lenken. Endre den før du limer den inn et sted |
+| Start ved | Valgfritt tidspunkt, `1:23` eller `83` |
+| Notat | Til den som vedlikeholder registeret. Vises ingen andre steder |
+
+**Start ved** legger på `nav`-parameteren SharePoints avspiller leser
+starttidspunktet fra — samme parameter «Del med starttidspunkt» i SharePoint
+bruker. Bærer lenken allerede en `nav`, står den urørt: da er tidspunktet
+kopiert fra SharePoint, og den vet best. Virker det ikke i din leietaker, lim
+inn hele lenken fra SharePoints delingsdialog og la feltet stå tomt — og si fra,
+så er det én linje i `api/src/opptak.ts` som må endres.
+
+**Lenken må peke på `sharepoint.com`.** Endepunktet omdirigerer fra ditt eget
+domene, og en åpen omdirigering er en gave til den som vil få en phishing-lenke
+til å se ut som om den kommer fra familiens nettsted. Skal registeret peke et
+annet sted, utvid appinnstillingen `OPPTAK_VERTER` (kommaseparerte domener).
+
+**Det registeret ikke gjør:** en innlogget kan følge omdirigeringen og kopiere
+den endelige adressen. Dette er en innpakning, ikke kryptografi. Vil du ha det
+strammere, bytt delingslenkene i SharePoint til «Bestemte personer» — da må hver
+enkelt autentisere seg mot Microsoft — uten å røre en eneste årstekst.
 
 ## Hva som bevisst ikke virker ennå
 

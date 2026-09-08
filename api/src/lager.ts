@@ -27,6 +27,7 @@ export const STI = {
   felter: "felter.json",
   indeks: "indeks.json",
   tilgang: "tilgang.json",
+  opptak: "opptak.json",
   aar: (aar: number) => `aar/${aar}.json`,
 } as const;
 

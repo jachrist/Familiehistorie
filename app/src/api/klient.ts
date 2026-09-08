@@ -13,6 +13,8 @@ import type {
   Innlogget,
   Opplastingsforesporsel,
   Opplastingssvar,
+  Opptak,
+  OpptaksregisterMedEtag,
   Ryddesvar,
   Sikkerhetskopi,
   Tilgangsliste,
@@ -93,6 +95,16 @@ export const api = {
 
   tilgang: () => hent<TilgangslisteMedEtag>("/api/tilgang"),
 
+  /** `verter` er hvilke domener registeret får peke på. Vises som hjelpetekst. */
+  opptak: () => hent<OpptaksregisterMedEtag & { verter: string[] }>("/api/opptak"),
+
+  lagreOpptak: (opptak: Opptak[], etag: string) =>
+    hent<OpptaksregisterMedEtag>("/api/opptak", {
+      method: "PUT",
+      headers: etag ? { ...JSONHODER, "If-Match": etag } : JSONHODER,
+      body: JSON.stringify({ opptak }),
+    }),
+
   lagreTilgang: (liste: Tilgangsliste, etag: string) =>
     hent<TilgangslisteMedEtag>("/api/tilgang", {
       method: "PUT",
@@ -166,6 +178,7 @@ export const api = {
 export const noekler = {
   meg: ["meg"] as const,
   tilgang: ["tilgang"] as const,
+  opptak: ["opptak"] as const,
   indeks: ["indeks"] as const,
   sikkerhetskopier: ["sikkerhetskopier"] as const,
   felter: ["felter"] as const,

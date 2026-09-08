@@ -3,6 +3,7 @@ import { useOkt } from "./auth/okt.js";
 import { Admin } from "./sider/Admin.js";
 import { Forside } from "./sider/Forside.js";
 import { Innlogging } from "./sider/Innlogging.js";
+import { Opptak } from "./sider/Opptak.js";
 import { RedigerAar } from "./sider/RedigerAar.js";
 import { Tilgang } from "./sider/Tilgang.js";
 
@@ -55,6 +56,7 @@ export function App() {
           en tydeligere beskjed enn en 403 etterpå. */}
       {erRedaktoer && <Route path="/admin" element={<Admin />} />}
       {erRedaktoer && <Route path="/tilgang" element={<Tilgang />} />}
+      {erRedaktoer && <Route path="/opptak" element={<Opptak />} />}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -352,6 +352,9 @@ Alle endepunkter under `/api`. Skriveoperasjoner krever rollen `redaktoer`.
 | `GET` | `/api/meg` | familie | `{ epost, navn, roller }` eller `401`. Kalles ved oppstart, siden kapselen ikke er lesbar for skript |
 | `GET` | `/api/tilgang` | redaktør | Hent tilgangslisten |
 | `PUT` | `/api/tilgang` | redaktør | Oppdater tilgangslisten |
+| `GET` | `/api/opptak` | redaktør | Opptaksregisteret, med hvilke verter det får peke på |
+| `PUT` | `/api/opptak` | redaktør | Oppdater registeret. ETag som på tilgangslisten |
+| `GET` | `/api/opptak/{id}` | familie | `302` til delingslenken i SharePoint, med eventuelt starttidspunkt. Svarer med en liten HTML-side ved feil, siden dette nås ved å klikke på en lenke |
 
 At `/api/media/opplasting` tar en **liste** og ikke én fil er en liten detalj med stor
 effekt: den lar redigerings-GUI-et hente SAS for 30 filer i ett kall og laste dem opp
@@ -600,6 +603,7 @@ Tailwind — smakssak, ikke arkitektur.
 | `/rediger/nytt` | Opprett år: velg årstall, resten som over |
 | `/admin` | Vedlikehold: familiemedlemmer, sikkerhetskopier, opprydding, tømming |
 | `/tilgang` | Tilgangslisten: hvem som er med, og hvem som kan redigere |
+| `/opptak` | Registeret over fulle opptak som ligger i SharePoint |
 | `/logg-inn` | E-postadresse, deretter engangskode. Husker hvor du var på vei |
 
 ### Forsiden

@@ -261,6 +261,21 @@ az staticwebapp appsettings set -n famhist-web -g rg-familiehistorie \
 
 Ingen ny utrulling nødvendig — appinnstillinger slår inn på neste kall.
 
+### Opptak i SharePoint
+
+Registeret under `/opptak` i appen får bare peke på `sharepoint.com`. Skal det
+peke et annet sted, utvid listen:
+
+```bash
+az staticwebapp appsettings set \
+  --name famhist-web \
+  --setting-names OPPTAK_VERTER="sharepoint.com,vimeo.com"
+```
+
+Begrensningen finnes fordi `/api/opptak/{id}` omdirigerer fra ditt eget domene.
+Uten den ville registeret vært en åpen omdirigering — en phishing-lenke som ser
+ut som om den kommer fra familiens nettsted.
+
 ### DNS for eget avsenderdomene
 
 Resend viser de eksakte verdiene under **Domains → Add domain**. Fire

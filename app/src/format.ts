@@ -24,3 +24,19 @@ export function tall(verdi: number, desimaler = 0): string {
     maximumFractionDigits: desimaler,
   });
 }
+
+/**
+ * `1:23` eller `83` → 83 sekunder. `undefined` når feltet er tomt eller tull.
+ *
+ * Godtar begge former med vilje: den som leser av et tidspunkt i en avspiller
+ * skriver `1:23`, og den som kopierer et tall fra et annet verktøy skriver 83.
+ */
+export function lesTid(raa: string): number | undefined {
+  const tekst = raa.trim();
+  if (!tekst) return undefined;
+
+  const deler = tekst.split(":");
+  if (deler.length > 3 || deler.some((d) => !/^\d+$/.test(d))) return undefined;
+
+  return deler.reduce((sum, d) => sum * 60 + Number(d), 0);
+}

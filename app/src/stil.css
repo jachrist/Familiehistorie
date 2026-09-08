@@ -1311,3 +1311,51 @@ mark {
 .koe-detalj-hoy {
   color: var(--varsel);
 }
+
+/* --- opptaksregisteret --- */
+.opptaksliste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.opptaksrad {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.opptaksrad-to {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+.opptaksfelt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.opptaksrad-bunn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--strek-svak);
+}
+.opptaksrad-bunn code {
+  font-size: 0.85em;
+}
+.opptak-mangler {
+  color: var(--blekk-matt);
+  font-size: 0.88rem;
+}
+
+@media (max-width: 560px) {
+  .opptaksrad-to {
+    grid-template-columns: 1fr;
+  }
+}
+.opptaksrad-bunn .lenkeknapp {
+  text-align: left;
+  word-break: break-word;
+}

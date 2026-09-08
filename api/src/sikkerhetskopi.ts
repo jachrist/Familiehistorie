@@ -18,6 +18,7 @@
 import type {
   Aarsdokument,
   Feltskjema,
+  Opptaksregister,
   Sikkerhetskopi,
   Sikkerhetskopiinnhold,
   Tilgangsliste,
@@ -87,6 +88,7 @@ export async function taSikkerhetskopi(tattAv: string, grunn: string): Promise<S
 
   const felter = (await lesJson<Feltskjema>(CONTAINER.innhold, STI.felter))?.verdi ?? null;
   const tilgang = (await lesJson<Tilgangsliste>(CONTAINER.innhold, STI.tilgang))?.verdi ?? null;
+  const opptak = (await lesJson<Opptaksregister>(CONTAINER.innhold, STI.opptak))?.verdi ?? null;
   const mediefiler = await listMedStorrelse(CONTAINER.media);
 
   const id = await ledigId();
@@ -101,6 +103,7 @@ export async function taSikkerhetskopi(tattAv: string, grunn: string): Promise<S
     mediebytes: mediefiler.reduce((sum, m) => sum + m.bytes, 0),
     felter,
     tilgang,
+    opptak,
     aar,
     mediefiler,
   };
@@ -180,6 +183,11 @@ export async function gjenopprett(
 ): Promise<{ aar: number; felter: boolean }> {
   if (innhold.felter) {
     await skrivJson(CONTAINER.innhold, STI.felter, innhold.felter);
+  }
+  // Opptaksregisteret hører til innholdet: en gjenoppretting uten det ville
+  // gitt årstekster med lenker som ikke lenger peker noe sted.
+  if (innhold.opptak) {
+    await skrivJson(CONTAINER.innhold, STI.opptak, innhold.opptak);
   }
 
   await iPuljer(innhold.aar, 8, (dok) =>

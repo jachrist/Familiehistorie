@@ -33,7 +33,7 @@ const REDAKTOER = "proeve-redaktoer@eksempel.no";
 const FAMILIE = "proeve-familie@eksempel.no";
 
 const { utstedToken, KAPSELNAVN } = await import("./dist/src/sesjon.js");
-const { CONTAINER, STI, lesJson, skrivJson, sikreContainere } = await import("./dist/src/lager.js");
+const { CONTAINER, STI, lesJson, skrivJson, slettBlob, sikreContainere } = await import("./dist/src/lager.js");
 const { tomBuffer } = await import("./dist/src/tilgang.js");
 const { slettTabeller } = await import("./dist/src/tabell.js");
 const { kanBestille, lagKode } = await import("./dist/src/kode.js");
@@ -84,10 +84,15 @@ const PROEVEAAR = ["1996", "1997", "1998", "1999"];
  * inn på utviklingsmaskinen.
  */
 let opprinneligTilgang;
+let opprinneligOpptak;
 
 async function settOppTilgang() {
   await sikreContainere();
   opprinneligTilgang = await lesJson(CONTAINER.innhold, STI.tilgang);
+  opprinneligOpptak = await lesJson(CONTAINER.innhold, STI.opptak);
+  // Prøven skriver registeret fra bunnen av, og sjekker blant annet at første
+  // lagring godtas uten ETag. Da må det ikke ligge et fra før.
+  await slettBlob(CONTAINER.innhold, STI.opptak);
   await skrivJson(CONTAINER.innhold, STI.tilgang, {
     personer: [
       { epost: REDAKTOER, navn: "Prøve Redaktør", roller: ["familie", "redaktoer"] },
@@ -101,6 +106,13 @@ async function settOppTilgang() {
 async function gjenopprettTilgang() {
   if (opprinneligTilgang) {
     await skrivJson(CONTAINER.innhold, STI.tilgang, opprinneligTilgang.verdi);
+  }
+  // Prøven skriver sitt eget opptaksregister. Fantes det ikke fra før, slettes
+  // det – ellers ville neste kjøring møtt en fil den trodde den opprettet selv.
+  if (opprinneligOpptak) {
+    await skrivJson(CONTAINER.innhold, STI.opptak, opprinneligOpptak.verdi);
+  } else {
+    await slettBlob(CONTAINER.innhold, STI.opptak);
   }
   tomBuffer();
   await slettTabeller();
@@ -231,6 +243,60 @@ await proev("PUT tilgang med duplikat adresse → 422", 422, () =>
   finn("PUT", "tilgang").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": liste.jsonBody.etag }, body: { personer: [{ epost: REDAKTOER, navn: "En", roller: ["redaktoer"] }, { epost: REDAKTOER, navn: "To", roller: ["familie"] }] } })));
 await proev("PUT tilgang med feil If-Match → 412", 412, () =>
   finn("PUT", "tilgang").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": '"0x8DFEIL"' }, body: { personer: [{ epost: REDAKTOER, navn: "Prøve Redaktør", roller: ["familie", "redaktoer"] }] } })));
+
+console.log("\nOpptaksregisteret");
+const OPPTAK = { opptak: [
+  { id: "bryllupet-1963", tittel: "Bryllupet i Vang kirke", url: "https://mqx.sharepoint.com/:v:/g/abc", start: 83 },
+  { id: "hytta", tittel: "Hytta ved Mjosa", url: "https://mqx.sharepoint.com/:v:/g/def" },
+]};
+await proev("PUT /api/opptak (forste gang)", 200, () =>
+  finn("PUT", "opptak").handler(req({ method: "PUT", headers: JSONH, body: OPPTAK })));
+const reg = await proev("GET /api/opptak", 200, () => finn("GET", "opptak").handler(req({})));
+console.log(`         → ${reg.jsonBody?.opptak?.length} opptak, tillatte verter: ${reg.jsonBody?.verter?.join(", ")}`);
+
+await proev("GET /api/opptak som familie → 403", 403, () =>
+  finn("GET", "opptak").handler(req({ som: "familie" })));
+await proev("PUT opptak med vert utenfor listen → 422", 422, () =>
+  finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": reg.jsonBody.etag }, body: { opptak: [{ id: "ond", tittel: "Ond", url: "https://ondt.example.com/x" }] } })));
+await proev("PUT opptak med http → 422", 422, () =>
+  finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": reg.jsonBody.etag }, body: { opptak: [{ id: "usikker", tittel: "Usikker", url: "http://mqx.sharepoint.com/x" }] } })));
+await proev("PUT opptak med duplikat id → 422", 422, () =>
+  finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": reg.jsonBody.etag }, body: { opptak: [OPPTAK.opptak[0], OPPTAK.opptak[0]] } })));
+await proev("PUT opptak med feil If-Match → 412", 412, () =>
+  finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": '"0x8DFEIL"' }, body: OPPTAK })));
+
+const uinnlogget = await proev("GET /api/opptak/{id} uten kapsel → 401", 401, () =>
+  finn("GET", "opptak/{id}").handler(req({ params: { id: "bryllupet-1963" }, som: "ingen" })));
+const erHtml = String(uinnlogget.headers?.["Content-Type"] ?? "").includes("text/html");
+console.log(`  ${erHtml ? "ok  " : "FEIL"}  ${"Avvisningen er en side, ikke JSON".padEnd(46)}`);
+if (!erHtml) feilet++;
+const lekker = String(uinnlogget.body ?? "").includes("sharepoint.com");
+console.log(`  ${!lekker ? "ok  " : "FEIL"}  ${"Uinnlogget faar ikke se delingslenken".padEnd(46)}`);
+if (lekker) feilet++;
+
+const videre = await proev("GET /api/opptak/{id} som familie → 302", 302, () =>
+  finn("GET", "opptak/{id}").handler(req({ params: { id: "bryllupet-1963" }, som: "familie" })));
+const maal = String(videre.headers?.Location ?? "");
+console.log(`         → ${maal}`);
+const harStart = maal.includes("nav=");
+console.log(`  ${harStart ? "ok  " : "FEIL"}  ${"Starttidspunkt lagt paa lenken".padEnd(46)}`);
+if (!harStart) feilet++;
+if (harStart) {
+  const nav = JSON.parse(Buffer.from(decodeURIComponent(new URL(maal).searchParams.get("nav")), "base64").toString("utf8"));
+  const riktig = nav?.playbackOptions?.startTimeInSeconds === 83;
+  console.log(`  ${riktig ? "ok  " : "FEIL"}  ${"nav peker paa 83 sekunder".padEnd(46)}`);
+  if (!riktig) feilet++;
+}
+
+const uten = await finn("GET", "opptak/{id}").handler(req({ params: { id: "hytta" }, som: "familie" }));
+const urort = uten.headers?.Location === "https://mqx.sharepoint.com/:v:/g/def";
+console.log(`  ${urort ? "ok  " : "FEIL"}  ${"Uten start staar lenken uroert".padEnd(46)}`);
+if (!urort) feilet++;
+
+await proev("GET /api/opptak/{id} som ikke finnes → 404", 404, () =>
+  finn("GET", "opptak/{id}").handler(req({ params: { id: "finnes-ikke" }, som: "familie" })));
+await proev("GET /api/opptak/{id} med rar id → 400", 400, () =>
+  finn("GET", "opptak/{id}").handler(req({ params: { id: "../tilgang" }, som: "familie" })));
 
 console.log("\nTabellen forsvinner under beina");
 // Klienten bufres for prosessens levetid. Blir tabellen borte etterpå, feilet

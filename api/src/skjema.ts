@@ -13,14 +13,19 @@
 import sanitizeHtml from "sanitize-html";
 import { z } from "zod";
 import type { Feltskjema, Medieobjekt } from "../../delt/typer.js";
+import { ID_MONSTER, sjekkUrl } from "./opptak.js";
 
 /** Bevisst liten liste. Redigering skal ikke kunne produsere vilkårlig markup. */
 const TILLATT: sanitizeHtml.IOptions = {
   allowedTags: ["p", "br", "strong", "em", "u", "a", "ul", "ol", "li", "blockquote", "h3", "h4"],
-  allowedAttributes: { a: ["href", "title"] },
+  // `target` og `rel` står her fordi transformen under setter dem: filtreringen
+  // kjører etterpå, og attributter som ikke er tillatt blir fjernet igjen. Uten
+  // dem gjorde transformen ingenting, og lenker åpnet seg i samme fane.
+  allowedAttributes: { a: ["href", "title", "target", "rel"] },
   allowedSchemes: ["http", "https", "mailto"],
-  // Uten dette blir en lenke til et annet nettsted en liten
-  // window.opener-svakhet.
+  // En lenke ut av nettstedet skal åpne seg ved siden av årssiden, ikke i
+  // stedet for den – og `noopener` hindrer at siden den åpner får en peker
+  // tilbake til vår.
   transformTags: {
     a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer", target: "_blank" }),
   },
@@ -158,3 +163,46 @@ export const tilgangslisteSkjema = z
     (l) => new Set(l.personer.map((p) => p.epost)).size === l.personer.length,
     { message: "Samme e-postadresse står oppført flere ganger." }
   );
+
+/**
+ * Opptaksregisteret.
+ *
+ * Id-en havner i en URL og i årstekster, så den holdes bevisst kjedelig: små
+ * bokstaver, tall og bindestrek. Da tåler den å bli skrevet av for hånd, limt
+ * inn i en e-post og lest opp i telefonen.
+ */
+export const opptakSkjema = z.object({
+  opptak: z
+    .array(
+      z.object({
+        id: z
+          .string()
+          .trim()
+          .toLowerCase()
+          .regex(ID_MONSTER, "Id-en kan bare inneholde små bokstaver, tall og bindestrek."),
+        tittel: z.string().trim().min(1, "Opptaket må ha en tittel.").max(200),
+        url: z
+          .string()
+          .trim()
+          .max(2000)
+          .superRefine((verdi, ctx) => {
+            const svar = sjekkUrl(verdi);
+            if (!svar.ok) ctx.addIssue({ code: "custom", message: svar.grunn });
+          }),
+        // Et døgn er rikelig, og hindrer at en tastefeil sender avspilleren til
+        // et tidspunkt som ikke finnes.
+        start: z.number().int().min(0).max(86_400).nullish(),
+        notat: z.string().trim().max(500).optional(),
+      })
+    )
+    .max(500)
+    .superRefine((opptak, ctx) => {
+      const sett = new Set<string>();
+      for (const o of opptak) {
+        if (sett.has(o.id)) {
+          ctx.addIssue({ code: "custom", message: `Id-en «${o.id}» er brukt mer enn én gang.` });
+        }
+        sett.add(o.id);
+      }
+    }),
+});
