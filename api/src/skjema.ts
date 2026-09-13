@@ -27,13 +27,42 @@ const TILLATT: sanitizeHtml.IOptions = {
   // slapp den gjennom, og redigeringsfeltet og saniteringen var uenige om hva
   // en intern lenke er.
   allowProtocolRelative: false,
-  // En lenke ut av nettstedet skal åpne seg ved siden av årssiden, ikke i
-  // stedet for den – og `noopener` hindrer at siden den åpner får en peker
-  // tilbake til vår.
   transformTags: {
-    a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer", target: "_blank" }),
+    a: (_navn, attributter) => {
+      // En lenke uten adresse er ikke en lenke. Den ser like blå ut som en
+      // ekte, og oppstår når markeringen forsvinner mens adressen skrives inn.
+      // Resultatet er en død lenke ingen skjønner hvorfor ikke virker, så den
+      // gjøres om til vanlig tekst. `span` står ikke på listen over tillatte
+      // merker, og faller derfor bort mens teksten blir stående.
+      // Adressen sjekkes her, ikke bare av `allowedSchemes`: den filtreringen
+      // kjører *etter* denne transformen, så en `javascript:`-lenke ville
+      // mistet adressen sin og blitt stående igjen som nettopp en død lenke.
+      if (!erTillattAdresse(attributter.href)) return { tagName: "span", attribs: {} };
+
+      // En lenke ut av nettstedet skal åpne seg ved siden av årssiden, ikke i
+      // stedet for den – og `noopener` hindrer at siden den åpner får en peker
+      // tilbake til vår.
+      return {
+        tagName: "a",
+        attribs: { ...attributter, rel: "noopener noreferrer", target: "_blank" },
+      };
+    },
   },
 };
+
+/**
+ * Samme regel som lenkeknappen i redigeringsfeltet.
+ *
+ * `//et-annet-sted` ser internt ut, men peker ut av nettstedet, og regnes
+ * derfor ikke som en intern adresse.
+ */
+function erTillattAdresse(href: string | undefined): boolean {
+  if (!href) return false;
+  const adresse = href.trim();
+  if (/^https?:\/\//i.test(adresse)) return true;
+  if (/^mailto:/i.test(adresse)) return true;
+  return adresse.startsWith("/") && !adresse.startsWith("//");
+}
 
 export function saniterRikTekst(raa: string): string {
   return sanitizeHtml(raa, TILLATT).trim();

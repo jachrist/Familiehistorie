@@ -42,6 +42,20 @@ export function RikTekst({ id, verdi, onEndret }: Props) {
   }
 
   function settLenke() {
+    // Markeringen tas vare på før dialogen åpnes.
+    //
+    // Safari på iPad flytter markeringen ut av feltet når `prompt` vises, og da
+    // lager `createLink` en lenke uten adresse: den ser like blå ut som en ekte
+    // og gjør ingenting. Å legge den tilbake etterpå er eneste måten å få
+    // kommandoen til å treffe teksten man faktisk markerte.
+    const valg = window.getSelection();
+    const omraade = valg && valg.rangeCount > 0 ? valg.getRangeAt(0).cloneRange() : null;
+
+    if (!omraade || omraade.collapsed) {
+      window.alert("Marker først teksten lenken skal ligge på.");
+      return;
+    }
+
     const svar = window.prompt(
       "Adresse. Bruk /api/opptak/<id> for et opptak i SharePoint.",
       "https://"
@@ -56,6 +70,12 @@ export function RikTekst({ id, verdi, onEndret }: Props) {
       );
       return;
     }
+
+    ref.current?.focus();
+    const naa = window.getSelection();
+    naa?.removeAllRanges();
+    naa?.addRange(omraade);
+
     kjor("createLink", url);
   }
 

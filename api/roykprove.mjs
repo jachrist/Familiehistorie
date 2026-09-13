@@ -222,7 +222,7 @@ console.log("\nLenker i rik tekst");
 const lenkeaar = await proev("PUT med lenker i teksten", 201, () =>
   finn("PUT", "aar/{aar}").handler(req({ method: "PUT", params: { aar: "1997" }, headers: JSONH, body: { felter: {
     tittel: "Lenker",
-    hendelser: '<p><a href="/api/opptak/bryllupet">intern</a> <a href="https://mqx-my.sharepoint.com/:v:/g/x">ekstern</a> <a href="//ondt.example.com">protokollrelativ</a></p>',
+    hendelser: '<p><a href="/api/opptak/bryllupet">intern</a> <a href="https://mqx-my.sharepoint.com/:v:/g/x">ekstern</a> <a href="//ondt.example.com">protokollrelativ</a> <a>uten adresse</a> <a href="javascript:alert(1)">ond</a></p>',
   }, media: [] } })));
 const html = lenkeaar.jsonBody?.felter?.hendelser ?? "";
 const kontroller = [
@@ -230,6 +230,11 @@ const kontroller = [
   ["Ekstern lenke beholdes", html.includes('href="https://mqx-my.sharepoint.com')],
   ["Protokollrelativ lenke mister adressen", !html.includes("ondt.example.com")],
   ["Lenker aapner i ny fane", html.includes('target="_blank"') && html.includes('rel="noopener noreferrer"')],
+  // En lenke uten brukbar adresse ser like blaa ut som en ekte og gjor
+  // ingenting. Den skal bli vanlig tekst, ikke bli staaende som doed lenke.
+  ["Lenke uten adresse blir tekst", html.includes("uten adresse") && !/<a(?![^>]*href)[^>]*>uten adresse/.test(html)],
+  ["javascript-lenke blir tekst", html.includes("ond") && !html.includes("javascript")],
+  ["Ingen lenker uten href staar igjen", !/<a(?![^>]*\shref=)/.test(html)],
 ];
 for (const [navn, ok] of kontroller) {
   console.log(`  ${ok ? "ok  " : "FEIL"}  ${navn.padEnd(46)}`);
