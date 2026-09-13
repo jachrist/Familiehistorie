@@ -42,10 +42,18 @@ export function RikTekst({ id, verdi, onEndret }: Props) {
   }
 
   function settLenke() {
-    const url = window.prompt("Adresse:", "https://");
+    const svar = window.prompt(
+      "Adresse. Bruk /api/opptak/<id> for et opptak i SharePoint.",
+      "https://"
+    );
+    if (svar === null) return;
+
+    const url = svar.trim();
     if (!url) return;
-    if (!/^https?:\/\//i.test(url)) {
-      window.alert("Lenken må begynne med http:// eller https://");
+    if (!erGyldigLenke(url)) {
+      window.alert(
+        "Lenken må begynne med https://, mailto: eller / for en side på dette nettstedet."
+      );
       return;
     }
     kjor("createLink", url);
@@ -95,4 +103,19 @@ export function RikTekst({ id, verdi, onEndret }: Props) {
       />
     </div>
   );
+}
+
+/**
+ * Samme regler som saniteringen på serveren.
+ *
+ * Interne lenker må være med: `/api/opptak/<id>` er hele poenget med
+ * opptaksregisteret, og uten dette kunne den ikke settes inn i det hele tatt.
+ *
+ * `//noe` er protokollrelativt og peker ut av nettstedet selv om det ser
+ * internt ut. Det behandles derfor som eksternt, og avvises.
+ */
+function erGyldigLenke(url: string): boolean {
+  if (/^https?:\/\//i.test(url)) return true;
+  if (/^mailto:/i.test(url)) return true;
+  return url.startsWith("/") && !url.startsWith("//");
 }

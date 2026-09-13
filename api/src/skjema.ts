@@ -23,6 +23,10 @@ const TILLATT: sanitizeHtml.IOptions = {
   // dem gjorde transformen ingenting, og lenker åpnet seg i samme fane.
   allowedAttributes: { a: ["href", "title", "target", "rel"] },
   allowedSchemes: ["http", "https", "mailto"],
+  // `//et-annet-sted` ser internt ut, men peker ut av nettstedet. Uten dette
+  // slapp den gjennom, og redigeringsfeltet og saniteringen var uenige om hva
+  // en intern lenke er.
+  allowProtocolRelative: false,
   // En lenke ut av nettstedet skal åpne seg ved siden av årssiden, ikke i
   // stedet for den – og `noopener` hindrer at siden den åpner får en peker
   // tilbake til vår.

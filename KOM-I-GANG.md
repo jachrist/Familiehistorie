@@ -412,6 +412,14 @@ står i stedet:
 Endepunktet krever innlogging og sender deg videre. Byttes lenken, endres den
 ett sted.
 
+Sett den inn med lenkeknappen i redigeringsfeltet — den godtar `https://`,
+`mailto:` og adresser som begynner med `/`, altså sider på dette nettstedet.
+
+**OneDrive for Business er SharePoint.** Delingslenker derfra ligger på
+`<leietaker>-my.sharepoint.com`, som allerede er tillatt. Personlige
+OneDrive-lenker på `1drv.ms` er det ikke — de må i så fall legges til i
+`OPPTAK_VERTER`.
+
 | Felt | Hva det er |
 |---|---|
 | Tittel | Bare til deg. Id-en lages automatisk av den |

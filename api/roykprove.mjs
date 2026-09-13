@@ -218,6 +218,24 @@ if (renset.jsonBody?.felter) {
   console.log(`         → hendelser: ${JSON.stringify(renset.jsonBody.felter.hendelser)}`);
 }
 
+console.log("\nLenker i rik tekst");
+const lenkeaar = await proev("PUT med lenker i teksten", 201, () =>
+  finn("PUT", "aar/{aar}").handler(req({ method: "PUT", params: { aar: "1997" }, headers: JSONH, body: { felter: {
+    tittel: "Lenker",
+    hendelser: '<p><a href="/api/opptak/bryllupet">intern</a> <a href="https://mqx-my.sharepoint.com/:v:/g/x">ekstern</a> <a href="//ondt.example.com">protokollrelativ</a></p>',
+  }, media: [] } })));
+const html = lenkeaar.jsonBody?.felter?.hendelser ?? "";
+const kontroller = [
+  ["Intern opptakslenke beholdes", html.includes('href="/api/opptak/bryllupet"')],
+  ["Ekstern lenke beholdes", html.includes('href="https://mqx-my.sharepoint.com')],
+  ["Protokollrelativ lenke mister adressen", !html.includes("ondt.example.com")],
+  ["Lenker aapner i ny fane", html.includes('target="_blank"') && html.includes('rel="noopener noreferrer"')],
+];
+for (const [navn, ok] of kontroller) {
+  console.log(`  ${ok ? "ok  " : "FEIL"}  ${navn.padEnd(46)}`);
+  if (!ok) { feilet++; console.log("         →", html.slice(0, 220)); }
+}
+
 console.log("\nMedia");
 const opp = await proev("POST /api/media/opplasting", 200, () =>
   finn("POST", "media/opplasting").handler(req({ method: "POST", headers: JSONH, body: { aar: 1972, filer: [{ filnavn: "bilde.jpg", type: "image/jpeg" }, { filnavn: "film.mp4", type: "video/mp4" }] } })));
