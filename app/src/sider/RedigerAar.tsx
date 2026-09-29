@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Medieobjekt } from "../../../delt/typer.js";
 import { Apifeil, api, noekler } from "../api/klient.js";
+import { BAKGRUNNSFELT, bakgrunnSomHtml } from "../data/bakgrunn.js";
 import { Medieliste } from "../komponenter/Medieliste.js";
 import { Opplastingskoe } from "../komponenter/Opplastingskoe.js";
 import { RikTekst } from "../komponenter/RikTekst.js";
@@ -27,6 +28,10 @@ export function RedigerAar() {
   // ikke rendres før feltene er fylt, ellers monteres redigeringsfeltene tomme
   // og et gjenopprettet utkast blir usynlig.
   const [klar, settKlar] = useState(false);
+  // RikTekst setter innholdet sitt én gang ved montering, så et felt som fylles
+  // programmatisk må monteres på nytt for å vise det. Telleren per felt er
+  // nøkkelen som får React til å gjøre nettopp det.
+  const [revisjon, settRevisjon] = useState<Record<string, number>>({});
   const lastet = useRef(false);
 
   const skjema = useQuery({ queryKey: noekler.felter, queryFn: api.felter, staleTime: 5 * 60_000 });
@@ -131,6 +136,24 @@ export function RedigerAar() {
     settUrort(false);
     settMedia(ny);
   }, []);
+
+  /**
+   * Setter inn bakgrunnsstoffet for året.
+   *
+   * Legger til under det som alt står der i stedet for å erstatte det. Har man
+   * skrevet noe selv i feltet, skal et knappetrykk aldri koste en det.
+   */
+  const settInnBakgrunn = useCallback(
+    (feltId: string, html: string) => {
+      settUrort(false);
+      settFelter((f) => {
+        const naa = (f[feltId] ?? "").trim();
+        return { ...f, [feltId]: naa ? `${somBlokk(naa)}${html}` : html };
+      });
+      settRevisjon((r) => ({ ...r, [feltId]: (r[feltId] ?? 0) + 1 }));
+    },
+    []
+  );
 
   const nyeMedier = useCallback((nye: Medieobjekt[]) => {
     settUrort(false);
@@ -279,11 +302,21 @@ export function RedigerAar() {
             </label>
             {def.hjelp && <p className="felt-hjelp">{def.hjelp}</p>}
             {def.type === "rik_tekst" ? (
-              <RikTekst
-                id={`felt-${def.id}`}
-                verdi={felter[def.id] ?? ""}
-                onEndret={(html) => endreFelt(def.id, html)}
-              />
+              <>
+                <RikTekst
+                  key={`${def.id}-${revisjon[def.id] ?? 0}`}
+                  id={`felt-${def.id}`}
+                  verdi={felter[def.id] ?? ""}
+                  onEndret={(html) => endreFelt(def.id, html)}
+                />
+                {def.id === BAKGRUNNSFELT && (
+                  <Bakgrunnsknapp
+                    aar={aar}
+                    naavaerende={felter[def.id] ?? ""}
+                    onSettInn={(html) => settInnBakgrunn(def.id, html)}
+                  />
+                )}
+              </>
             ) : (
               <input
                 id={`felt-${def.id}`}
@@ -326,6 +359,62 @@ export function RedigerAar() {
         </div>
       </form>
     </main>
+  );
+}
+
+/**
+ * Pakker løs tekst i et avsnitt.
+ *
+ * Skriver man én linje i et tomt redigeringsfelt uten å trykke linjeskift,
+ * blir den liggende som en naken tekstnode. Legges bakgrunnen til rett etter,
+ * klistrer første linje seg inntil den uten luft imellom. Har feltet allerede
+ * blokker i seg, står det som det er.
+ */
+function somBlokk(html: string): string {
+  return /<(p|ul|ol|blockquote|h3|h4)\b/i.test(html) ? html : `<p>${html}</p>`;
+}
+
+/**
+ * Setter inn hva som skjedde i verden, Norge og Oslo dette året.
+ *
+ * Vises bare for år vi faktisk har noe om — en knapp som ikke gjør noe er
+ * verre enn ingen knapp.
+ */
+function Bakgrunnsknapp({
+  aar,
+  naavaerende,
+  onSettInn,
+}: {
+  aar: number;
+  naavaerende: string;
+  onSettInn: (html: string) => void;
+}) {
+  const html = bakgrunnSomHtml(aar);
+  if (!html) return null;
+
+  const alt = naavaerende.includes(html);
+  const tomt = naavaerende.trim() === "";
+
+  return (
+    <p className="felt-handling">
+      <button
+        type="button"
+        className="lenkeknapp"
+        disabled={alt}
+        onClick={() => onSettInn(html)}
+      >
+        {alt
+          ? `Bakgrunn for ${aar} er satt inn`
+          : tomt
+            ? `Sett inn bakgrunn for ${aar}`
+            : `Legg til bakgrunn for ${aar}`}
+      </button>
+      {!alt && (
+        <span className="felt-handling-hjelp">
+          Verden, Norge og Oslo. Rediger fritt etterpå.
+        </span>
+      )}
+    </p>
   );
 }
 

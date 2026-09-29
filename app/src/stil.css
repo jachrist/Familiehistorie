@@ -1359,3 +1359,21 @@ mark {
   text-align: left;
   word-break: break-word;
 }
+
+/* --- bakgrunnsstoff i redigeringen --- */
+.felt-handling {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 6px 0 0;
+}
+.felt-handling-hjelp {
+  color: var(--blekk-matt);
+  font-size: 0.85rem;
+}
+.felt-handling button:disabled {
+  color: var(--blekk-matt);
+  text-decoration: none;
+  cursor: default;
+}

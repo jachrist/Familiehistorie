@@ -390,6 +390,26 @@ kan du spole til et bedre bilde i medielisten og trykke «Bytt plakatbilde» —
 Blob. Det krever at CORS-reglene på lagringskontoen slipper gjennom `Range`;
 `infra/main.bicep` og `verktoy/lager-oppsett.mjs` setter dem.
 
+## Bakgrunnsstoff per år
+
+Feltet «Verden rundt oss» kan fylles med ett trykk. Under feltet i redigeringen
+står **«Sett inn bakgrunn for 1972»** for de årene vi har noe om — tre linjer om
+hva som skjedde i verden, i Norge og i Oslo. Teksten kan redigeres fritt etterpå.
+
+Dekningen er **1950–1977** foreløpig. For andre år vises ingen knapp; en knapp
+som ikke gjør noe er verre enn ingen knapp.
+
+Står det noe i feltet fra før, legges bakgrunnen til under i stedet for å
+erstatte. Er den alt satt inn, er knappen låst, så et dobbelttrykk ikke gir
+teksten to ganger.
+
+Stoffet ligger i `app/src/data/bakgrunn.ts`, ikke i lagringskontoen. Det er
+oppslagsverk, ikke familiens innhold: en tømming rører det ikke, en
+sikkerhetskopi slipper å bære det, og en rettelse kommer alle år til gode i én
+utrulling. Teksten er skrevet ned fra hukommelsen — årstall for norske og
+særlig Oslo-lokale hendelser er verdt en kontroll før de blir stående som
+familiens historie.
+
 ## Opptak i SharePoint
 
 Fulle, uklippede opptak hører ikke hjemme i mediegalleriet. De er store, ofte i
