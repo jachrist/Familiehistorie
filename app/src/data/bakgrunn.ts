@@ -154,6 +154,207 @@ export const BAKGRUNN: Record<number, Bakgrunn> = {
     norge:
       "Bravo-utblåsningen på Ekofisk i april. Det første store oljeutslippet i Nordsjøen.",
   },
+  1978: {
+    verden: "Den første «prøverørsbabyen» blir født i England. Johannes Paul II blir pave.",
+    norge: "Stortinget vedtar selvbestemt abort.",
+  },
+  1979: {
+    verden:
+      "Revolusjonen i Iran. Sovjetisk invasjon i Afghanistan. Margaret Thatcher blir britisk statsminister.",
+    norge: "Alta-saken tilspisser seg. Demonstrasjonene mot utbyggingen samler folk fra hele landet.",
+  },
+  1980: {
+    verden: "Mange land boikotter OL i Moskva. John Lennon drepes i New York i desember.",
+    norge: "Alexander Kielland-ulykken 27. mars. 123 mennesker omkommer i Nordsjøen.",
+  },
+  1981: {
+    verden: "Ronald Reagan blir president. De første tilfellene av det som får navnet aids beskrives.",
+    norge:
+      "Gro Harlem Brundtland blir landets første kvinnelige statsminister i februar. Etter valget overtar Kåre Willoch.",
+  },
+  1982: {
+    verden: "Falklandskrigen mellom Storbritannia og Argentina.",
+  },
+  1983: {
+    verden:
+      "Den kalde krigen er på sitt kaldeste. Frykten for atomkrig preger tiåret og popkulturen med det.",
+  },
+  1984: {
+    verden: "Sultkatastrofen i Etiopia. Band Aid samler inn penger over hele Europa.",
+  },
+  1985: {
+    verden:
+      "Mikhail Gorbatsjov blir sovjetisk leder og åpner for glasnost og perestrojka. Live Aid sendes verden over.",
+    norge: "Stortingsvalg; Willoch-regjeringen fortsetter med knapp margin.",
+  },
+  1986: {
+    verden:
+      "Tsjernobyl-ulykken i april. Romfergen Challenger havarerer i januar. Olof Palme drepes i Stockholm i februar.",
+    norge:
+      "Nedfall fra Tsjernobyl rammer fjellområdene. Gro Harlem Brundtland danner regjering med åtte kvinnelige statsråder.",
+  },
+  1987: {
+    verden: "INF-avtalen fjerner en hel klasse atomvåpen fra Europa.",
+    norge:
+      "Brundtland-kommisjonens rapport «Vår felles framtid» setter bærekraftig utvikling på dagsordenen.",
+  },
+  1988: {
+    verden: "Sovjetunionen begynner å trekke styrkene ut av Afghanistan.",
+  },
+  1989: {
+    verden:
+      "Berlinmuren faller 9. november, og kommunistregimene i Øst-Europa kollapser på få måneder. Opprøret på Den himmelske freds plass slås ned i juni.",
+    norge: "Jan P. Syse danner borgerlig regjering.",
+  },
+  1990: {
+    verden: "Tyskland gjenforenes. Nelson Mandela løslates etter 27 år.",
+    norge:
+      "Brannen på Scandinavian Star i april; 159 omkommer. Gro Harlem Brundtland tilbake som statsminister.",
+  },
+  1991: {
+    verden: "Sovjetunionen oppløses ved årsskiftet. Golfkrigen.",
+    norge: "Kong Olav V dør i januar. Harald V blir konge.",
+    oslo: "Byen tar farvel med folkekongen; folk setter lys utenfor slottet i januarkulden.",
+  },
+  1992: {
+    verden: "Krigen i Bosnia bryter ut. Miljøtoppmøtet i Rio.",
+  },
+  1993: {
+    verden: "EU opprettes gjennom Maastricht-traktaten.",
+    norge:
+      "Oslo-avtalen undertegnes i Washington. Norske diplomater hadde meklet i hemmelighet mellom Israel og PLO.",
+  },
+  1994: {
+    verden: "Folkemordet i Rwanda. Apartheid tar slutt, og Nelson Mandela blir president.",
+    norge:
+      "Vinter-OL på Lillehammer i februar. Folkeavstemning om EU i november; nei-siden vinner igjen, med 52,2 prosent.",
+  },
+  1995: {
+    verden: "Krigen i Bosnia ender med Dayton-avtalen.",
+    norge: "Storflommen på Østlandet i mai — «Vesleofsen».",
+  },
+  1996: {
+    verden: "Internett begynner å nå vanlige hjem.",
+    norge: "Thorbjørn Jagland overtar som statsminister etter Gro Harlem Brundtland.",
+  },
+  1997: {
+    verden: "Prinsesse Diana omkommer i Paris i august.",
+    norge: "Kjell Magne Bondevik danner sentrumsregjering.",
+  },
+  1998: {
+    verden: "Google grunnlegges.",
+    norge:
+      "Bondevik sykmeldes offentlig for depresjon. Måten det ble møtt på, endret hvordan psykisk helse omtales.",
+  },
+  1999: {
+    verden: "Krigen i Kosovo; NATO bomber Serbia. Frykten for «år 2000-problemet» preger høsten.",
+  },
+  2000: {
+    verden: "Tusenårsskiftet passerer uten datakollaps.",
+    norge: "Jens Stoltenberg blir statsminister for første gang.",
+  },
+  2001: {
+    verden: "Terrorangrepene mot USA 11. september.",
+    norge: "Bondevik tilbake som statsminister etter valget.",
+  },
+  2002: {
+    verden: "Euroen kommer som sedler og mynt i tolv land.",
+  },
+  2003: {
+    verden: "USA invaderer Irak.",
+  },
+  2004: {
+    verden:
+      "Flodbølgen i Indiahavet andre juledag; rundt 230 000 omkommer. Facebook grunnlegges.",
+    norge: "Mange nordmenn rammes av flodbølgen i Thailand.",
+    oslo: "«Skrik» og «Madonna» stjeles fra Munch-museet i august.",
+  },
+  2005: {
+    verden: "YouTube starter.",
+    norge:
+      "Norge feirer hundre år som selvstendig stat. Stoltenberg danner rødgrønn flertallsregjering.",
+  },
+  2006: {
+    oslo: "De stjålne Munch-maleriene kommer til rette.",
+  },
+  2007: {
+    verden: "Den første iPhonen lanseres.",
+  },
+  2008: {
+    verden:
+      "Finanskrisen; Lehman Brothers går konkurs i september. Barack Obama velges til president.",
+    oslo: "Operaen i Bjørvika åpner i april.",
+  },
+  2009: {
+    verden: "Svineinfluensaen sprer seg, og massevaksinering settes i gang.",
+  },
+  2010: {
+    verden: "Askeskyen fra Eyjafjallajökull stanser flytrafikken i Europa i april.",
+  },
+  2011: {
+    verden: "Den arabiske våren. Osama bin Laden drepes.",
+    norge:
+      "Terrorangrepene 22. juli. 77 mennesker drepes i regjeringskvartalet og på Utøya.",
+    oslo: "Bomben rammer regjeringskvartalet. Dagene etter fyller rosetoget gatene.",
+  },
+  2012: {
+    norge: "Rettssaken etter 22. juli går for Oslo tingrett.",
+  },
+  2013: {
+    verden: "Snowden-avsløringene om masseovervåking.",
+    norge: "Erna Solberg blir statsminister.",
+  },
+  2014: {
+    verden: "Russland annekterer Krim. Ebolautbruddet i Vest-Afrika.",
+    norge: "Grunnloven fyller 200 år.",
+  },
+  2015: {
+    verden:
+      "Flyktningkrisen i Europa. Terrorangrepene i Paris i november. Klimaavtalen i Paris i desember.",
+    norge: "Flyktninger kommer også over Storskog i nord.",
+  },
+  2016: {
+    verden: "Storbritannia stemmer for å forlate EU. Donald Trump velges til president.",
+  },
+  2017: {
+    verden: "#MeToo sprer seg over hele verden.",
+    norge: "Solberg-regjeringen fortsetter etter valget.",
+  },
+  2018: {
+    verden: "En av de varmeste somrene som er målt i Nord-Europa.",
+    norge: "Tørkesommeren rammer landbruket hardt.",
+  },
+  2019: {
+    verden: "Greta Thunberg og skolestreiken for klimaet preger året.",
+  },
+  2020: {
+    verden: "Koronapandemien. Store deler av verden stenger ned i mars.",
+    norge: "Norge stenger ned 12. mars — de mest inngripende tiltakene i fredstid.",
+    oslo: "Tomme gater, hjemmekontor og stengte skoler.",
+  },
+  2021: {
+    verden: "Stormingen av Kongressen 6. januar. Vaksinene kommer utover året.",
+    norge: "Jonas Gahr Støre blir statsminister. Gjenåpningen kommer i september.",
+  },
+  2022: {
+    verden:
+      "Russland invaderer Ukraina 24. februar. Energipriser og inflasjon skyter i været.",
+    norge: "Strømprisene blir hovedtema. Ukrainske flyktninger tas imot.",
+    oslo: "Skytingen i sentrum natt til 25. juni, like før Pride-toget.",
+  },
+  2023: {
+    verden:
+      "Kunstig intelligens blir allemannseie. Krigen i Gaza bryter ut i oktober.",
+    norge: "Ekstremværet «Hans» i august gir flom og skred på Østlandet.",
+  },
+  2024: {
+    verden: "Valgår i store deler av verden. Trump velges til president på nytt.",
+  },
+  2025: {
+    verden: "Trump tiltrer for andre gang i januar.",
+    norge:
+      "Senterpartiet går ut av regjeringen i januar, og Støre fortsetter med en ren Arbeiderparti-regjering. Stortingsvalg i september.",
+  },
 };
 
 /** Feltet bakgrunnen hører hjemme i. Samsvarer med `felter.json`. */

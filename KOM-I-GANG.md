@@ -396,8 +396,11 @@ Feltet «Verden rundt oss» kan fylles med ett trykk. Under feltet i redigeringe
 står **«Sett inn bakgrunn for 1972»** for de årene vi har noe om — tre linjer om
 hva som skjedde i verden, i Norge og i Oslo. Teksten kan redigeres fritt etterpå.
 
-Dekningen er **1950–1977** foreløpig. For andre år vises ingen knapp; en knapp
-som ikke gjør noe er verre enn ingen knapp.
+Dekningen er **1950–2025**. For andre år vises ingen knapp; en knapp som ikke
+gjør noe er verre enn ingen knapp.
+
+2026 står bevisst tomt. Året er ikke omme, og et årssammendrag skrevet midtveis
+blir misvisende. Det føres på når året er ferdig.
 
 Står det noe i feltet fra før, legges bakgrunnen til under i stedet for å
 erstatte. Er den alt satt inn, er knappen låst, så et dobbelttrykk ikke gir
