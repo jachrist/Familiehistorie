@@ -362,6 +362,42 @@ const serAdresser = (helseRedaktoer.jsonBody?.adresser ?? []).length === 2 && ma
 console.log(`  ${serAdresser ? "ok  " : "FEIL"}  ${"Redaktør ser adressene, maskert".padEnd(46)}`);
 if (!serAdresser) { feilet++; console.log("         →", helseRedaktoer.jsonBody?.adresser); }
 
+console.log("\nCORS paa lagringskontoen");
+// Opplastingen gaar direkte fra nettleseren til Blob. Staar ikke nettstedets
+// adresse i reglene, feiler den med «Nettverksfeil» mens alt annet virker.
+const { settCors, CORS_REGLER } = await import("../verktoy/lager-oppsett.mjs");
+
+await settCors("UseDevelopmentStorage=true");
+const dekket = await proev("GET /api/helse fra en tillatt adresse", 200, () =>
+  finn("GET", "helse").handler(req({ headers: { host: "localhost:5173", "x-forwarded-proto": "http" } })));
+const erDekket = dekket.jsonBody?.opplastingTillatt === true;
+console.log(`  ${erDekket ? "ok  " : "FEIL"}  ${"Tillatt adresse gir opplastingTillatt=true".padEnd(46)}`);
+if (!erDekket) { feilet++; console.log("         →", JSON.stringify(dekket.jsonBody?.cors)); }
+
+const nektet = await proev("GET /api/helse fra et nytt domene", 200, () =>
+  finn("GET", "helse").handler(req({ headers: { host: "historie.mqx.no" } })));
+const erNektet = nektet.jsonBody?.opplastingTillatt === false;
+console.log(`  ${erNektet ? "ok  " : "FEIL"}  ${"Ukjent adresse gir opplastingTillatt=false".padEnd(46)}`);
+if (!erNektet) { feilet++; console.log("         →", JSON.stringify(nektet.jsonBody?.cors)); }
+
+const sierIfra = (nektet.jsonBody?.merknader ?? []).some((m) => m.includes("historie.mqx.no") && m.includes("lagringskontoen"));
+console.log(`  ${sierIfra ? "ok  " : "FEIL"}  ${"Merknaden navngir adressen og hvor den settes".padEnd(46)}`);
+if (!sierIfra) { feilet++; console.log("         →", nektet.jsonBody?.merknader); }
+
+// `req()` er redaktoer som standard, saa uinnlogget maa sies eksplisitt.
+const aapen = await finn("GET", "helse").handler(req({ headers: { host: "historie.mqx.no" }, som: "ingen" }));
+const skjult = aapen.jsonBody?.cors === undefined;
+console.log(`  ${skjult ? "ok  " : "FEIL"}  ${"Uinnlogget ser ikke listen over opphav".padEnd(46)}`);
+if (!skjult) { feilet++; console.log("         →", JSON.stringify(aapen.jsonBody?.cors)); }
+const aapenSierIfra = (aapen.jsonBody?.merknader ?? []).some((m) => m.includes("lagringskontoen"));
+console.log(`  ${aapenSierIfra ? "ok  " : "FEIL"}  ${"Uinnlogget faar likevel merknaden".padEnd(46)}`);
+if (!aapenSierIfra) feilet++;
+
+const serListen = Array.isArray(nektet.jsonBody?.cors?.tillatteOpphav) && nektet.jsonBody.cors.tillatteOpphav.length > 0;
+console.log(`  ${serListen ? "ok  " : "FEIL"}  ${"Redaktoer ser hvilke opphav som er tillatt".padEnd(46)}`);
+if (!serListen) { feilet++; console.log("         →", JSON.stringify(redaktoerCors.jsonBody?.cors)); }
+void CORS_REGLER;
+
 console.log("\nSikkerhetskopi");
 const kopi = await proev("POST /api/vedlikehold/sikkerhetskopi", 200, () =>
   finn("POST", "vedlikehold/sikkerhetskopi").handler(req({ method: "POST", headers: JSONH, body: {} })));

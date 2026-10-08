@@ -387,6 +387,40 @@ traces
 | order by timestamp desc
 ```
 
+### «Nettverksfeil under opplasting» etter nytt domene
+
+Bilder og video lastes opp **direkte fra nettleseren til Blob**, utenom API-et.
+Det er et kryssopphav-kall, så lagringskontoen må kjenne adressen nettstedet
+serveres fra. Legger du på et eget domene, står den gamle adressen alene i
+reglene, og opplastingen blokkeres før forespørselen sendes.
+
+**Innstillingen ligger på lagringskontoen, ikke på Static Web App-en.** I
+portalen: lagringskontoen → **Settings → Resource sharing (CORS)** → fanen
+**Blob service**. Det er derfor den ikke er å finne der man leter først.
+
+Feilen er vanskelig å kjenne igjen fordi alt annet virker: bilder vises (et
+vanlig `<img>` bryr seg ikke om CORS), sidene laster, innlogging går. Bare
+opplasting og plakatvelgeren ryker, og begge melder «Nettverksfeil».
+
+`/api/helse` svarer på spørsmålet direkte — `opplastingTillatt` er `false` når
+adressen ikke er dekket, og merknaden navngir både adressen og hvor den settes.
+Som redaktør ser du hele listen under `cors`.
+
+Legg til domenet ved å kjøre malen på nytt med begge adressene. Listen erstattes
+i sin helhet, så den gamle må være med:
+
+```bash
+az deployment group create \
+  --resource-group <ressursgruppe> \
+  --template-file infra/main.bicep \
+  --parameters prefiks=<prefiks> \
+    tillatteOpphav='["https://<swa-navn>.azurestaticapps.net","https://historie.mqx.no"]'
+```
+
+Endringen slår inn med en gang. Nettleseren kan ha husket et avvist
+preflight-svar i inntil en time, så last siden på nytt med tømt buffer hvis den
+fortsatt feiler.
+
 ### Når noe ikke svarer
 
 ```

@@ -1,5 +1,6 @@
 import { app, type HttpRequest, type HttpResponseInit } from "@azure/functions";
 import type { Tilgangsliste } from "../../../delt/typer.js";
+import { finnOpphav, vurderCors } from "../cors.js";
 import { epostErSattOpp } from "../epost.js";
 import { sisteUtfall, sjekkTabellager } from "../hendelse.js";
 import { CONTAINER, STI, lesJson } from "../lager.js";
@@ -44,8 +45,14 @@ app.http("helse", {
     const person = await innlogget(req).catch(() => undefined);
     const erRedaktoer = person ? harRolle(person, "redaktoer") : false;
 
+    // Opplastingen går direkte fra nettleseren til Blob, så lagringskontoen må
+    // kjenne adressen nettstedet serveres fra. Et nytt domene er den vanlige
+    // grunnen til at det plutselig ikke stemmer.
+    const cors = await vurderCors(finnOpphav((navn) => req.headers.get(navn)));
+
     const svar = {
       lager: false,
+      opplastingTillatt: cors.dekket,
       tabellager: false,
       tilgangsliste: false,
       antallPersoner: 0,
@@ -87,6 +94,16 @@ app.http("helse", {
       );
     }
 
+    if (cors.feil) {
+      svar.merknader.push(`Fikk ikke lest CORS-reglene på lagringskontoen: ${cors.feil}`);
+    } else if (cors.dekket === false) {
+      svar.merknader.push(
+        `${cors.opphav} står ikke blant de tillatte opphavene på lagringskontoen. ` +
+          "Opplasting av bilder og video vil feile med «Nettverksfeil». " +
+          "Innstillingen ligger på lagringskontoen (Resource sharing / CORS), ikke på Static Web App-en."
+      );
+    }
+
     if (!svar.lager) svar.merknader.push("LAGER_TILKOBLING mangler eller er feil.");
     if (svar.lager && !svar.tilgangsliste) {
       svar.merknader.push("innhold/tilgang.json finnes ikke. Kjør npm run seed:sky.");
@@ -111,6 +128,9 @@ app.http("helse", {
     return json({
       ok,
       ...svar,
+      // Vertsnavn, ikke hemmeligheter – men de hører likevel til bildet en
+      // redaktør trenger, ikke til det åpne svaret.
+      cors: { opphav: cors.opphav, tillatteOpphav: cors.tillatteOpphav },
       adresser,
       // Hva som faktisk skjedde sist noen ba om en kode. Svarer i sanntid, i
       // motsetning til Application Insights.
