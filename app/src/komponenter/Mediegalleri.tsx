@@ -28,14 +28,31 @@ function Bilde({ m }: { m: MedieobjektMedUrl }) {
       {feilet ? (
         <div className="galleri-feil">Bildet kunne ikke lastes</div>
       ) : (
-        <img
-          src={m.miniatyrUrl ?? m.url}
-          alt={m.bildetekst ?? `Bilde fra ${m.tatt ?? "ukjent tid"}`}
-          loading="lazy"
-          width={m.bredde ?? undefined}
-          height={m.hoyde ?? undefined}
-          onError={() => settFeilet(true)}
-        />
+        /*
+          Galleriet viser miniatyren. Lenken går til web-versjonen på 2400 px,
+          som er den største vi har – god nok til å skrive ut eller ta vare på.
+
+          Vanlig lenke, ikke nedlasting: `download` virker ikke på tvers av
+          opphav, og lagringskontoen er et annet opphav enn nettstedet. Bildet
+          åpner seg i stedet i egen fane, der både «Lagre bilde» og utskrift
+          ligger der folk forventer dem.
+        */
+        <a
+          className="galleri-lenke"
+          href={m.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Åpne bildet i full størrelse"
+        >
+          <img
+            src={m.miniatyrUrl ?? m.url}
+            alt={m.bildetekst ?? `Bilde fra ${m.tatt ?? "ukjent tid"}`}
+            loading="lazy"
+            width={m.bredde ?? undefined}
+            height={m.hoyde ?? undefined}
+            onError={() => settFeilet(true)}
+          />
+        </a>
       )}
       {(m.bildetekst || m.tatt) && (
         <figcaption>

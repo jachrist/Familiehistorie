@@ -1377,3 +1377,20 @@ mark {
   text-decoration: none;
   cursor: default;
 }
+
+.galleri-lenke {
+  display: block;
+  border-radius: var(--radius);
+}
+.galleri-lenke:focus-visible {
+  outline: 2px solid var(--aksent);
+  outline-offset: 3px;
+}
+@media (hover: hover) {
+  .galleri-lenke img {
+    transition: filter 0.15s ease-out;
+  }
+  .galleri-lenke:hover img {
+    filter: brightness(1.06);
+  }
+}

@@ -185,7 +185,10 @@ export function Opplastingskoe({ aar, onFerdig, onAarsforslag, nesteRekkefolge }
               fil: hoved.fil,
               miniatyr: k.video ? null : (avledet?.fil ?? null),
               plakat: k.video ? (avledet?.fil ?? null) : null,
-              bildetekst: "",
+              // Filnavnet er som regel det nærmeste en bildetekst man har når
+              // bunken kommer inn – «Bryllup 1963 Oslo.jpg» sier allerede det
+              // meste. Det er et utgangspunkt å redigere, ikke en påstand.
+              bildetekst: utenFiltype(k.post.fil.name),
               tatt: k.exif.tatt ?? null,
               // Målene lagres også for video, så galleriet kan sette av riktig
               // plass før filen er lastet og siden ikke hopper.
@@ -334,4 +337,9 @@ export function Opplastingskoe({ aar, onFerdig, onAarsforslag, nesteRekkefolge }
       )}
     </div>
   );
+}
+
+/** `Bryllup 1963 Oslo.jpg` → `Bryllup 1963 Oslo`. Bare siste endelse fjernes. */
+function utenFiltype(filnavn: string): string {
+  return filnavn.replace(/\.[^.\s]{1,8}$/, "").trim();
 }
