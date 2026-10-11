@@ -121,6 +121,61 @@ app.http("opptakAapne", {
   },
 });
 
+/**
+ * Samme som over, men til et bestemt tidspunkt i opptaket.
+ *
+ * Adressen er tiden selv, ikke et scenenummer. Omrokkerer man scenelisten i
+ * registeret senere, fortsetter lenkene som alt står i en årstekst å peke på
+ * riktig sted – de er ikke avhengige av rekkefølgen.
+ *
+ * Tidspunktet trenger derfor ikke finnes i listen. Det er ingen risiko i det:
+ * selve adressen kommer fortsatt fra registeret, og det eneste en oppdiktet
+ * verdi kan gjøre er å starte samme video et annet sted.
+ */
+app.http("opptakScene", {
+  methods: ["GET"],
+  route: "opptak/{id}/{sekunder}",
+  authLevel: "anonymous",
+  handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
+    const id = (req.params.id ?? "").trim().toLowerCase();
+    const raa = (req.params.sekunder ?? "").trim();
+
+    if (!ID_MONSTER.test(id) || !/^\d{1,5}$/.test(raa)) {
+      return side(400, "Ugyldig lenke", "Adressen ser ikke ut som en scenelenke.");
+    }
+    const sekunder = Number(raa);
+    if (sekunder > 86_400) {
+      return side(400, "Ugyldig lenke", "Tidspunktet ligger lenger ut enn et døgn.");
+    }
+
+    const person = await innlogget(req);
+    if (!person || !harRolle(person, "familie")) {
+      return side(
+        401,
+        "Du må logge inn",
+        "Opptakene er private. Logg inn på Familiehistorie først, så virker lenken."
+      );
+    }
+
+    const opptak = await finnOpptak(id);
+    if (!opptak) {
+      return side(
+        404,
+        "Fant ikke opptaket",
+        "Lenken peker på et opptak som ikke står i registeret lenger. Si fra til den som vedlikeholder nettstedet."
+      );
+    }
+
+    return {
+      status: 302,
+      headers: {
+        Location: medStarttid(opptak.url, sekunder, true),
+        "Cache-Control": "no-store",
+      },
+    };
+  },
+});
+
 function side(status: number, tittel: string, tekst: string): HttpResponseInit {
   const html =
     `<!doctype html><html lang="no"><head><meta charset="utf-8">` +

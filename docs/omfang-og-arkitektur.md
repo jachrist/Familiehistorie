@@ -355,6 +355,7 @@ Alle endepunkter under `/api`. Skriveoperasjoner krever rollen `redaktoer`.
 | `GET` | `/api/opptak` | redaktør | Opptaksregisteret, med hvilke verter det får peke på |
 | `PUT` | `/api/opptak` | redaktør | Oppdater registeret. ETag som på tilgangslisten |
 | `GET` | `/api/opptak/{id}` | familie | `302` til delingslenken i SharePoint, med eventuelt starttidspunkt. Svarer med en liten HTML-side ved feil, siden dette nås ved å klikke på en lenke |
+| `GET` | `/api/opptak/{id}/{sekunder}` | familie | Samme, men til et bestemt tidspunkt. Adressen er tiden selv, ikke et scenenummer, så omrokkering av scenelisten ikke bryter lenker som alt står i en årstekst |
 
 At `/api/media/opplasting` tar en **liste** og ikke én fil er en liten detalj med stor
 effekt: den lar redigerings-GUI-et hente SAS for 30 filer i ett kall og laste dem opp

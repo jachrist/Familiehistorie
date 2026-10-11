@@ -362,6 +362,52 @@ const serAdresser = (helseRedaktoer.jsonBody?.adresser ?? []).length === 2 && ma
 console.log(`  ${serAdresser ? "ok  " : "FEIL"}  ${"Redaktør ser adressene, maskert".padEnd(46)}`);
 if (!serAdresser) { feilet++; console.log("         →", helseRedaktoer.jsonBody?.adresser); }
 
+console.log("\nScenelenker");
+const MED_SCENER = { opptak: [
+  { id: "jul-1987", tittel: "1987 Jul, Nyttaar, Bad", url: "https://mqx.sharepoint.com/:v:/g/jul", scener: [
+    { start: 0, tittel: "I badekaret", aar: 1987 },
+    { start: 764, tittel: "Julemiddag hos mormor", aar: 1987 },
+    { start: 1992, tittel: "Julespill paa Roenningen", aar: 1988 },
+  ] },
+  // Lenken baerer alt et tidspunkt fra SharePoints egen delingsdialog.
+  { id: "med-nav", tittel: "Med innebygd tid", url: "https://mqx.sharepoint.com/:v:/g/x?nav=eyJhIjoxfQ==" },
+]};
+const scenereg = await finn("GET", "opptak").handler(req({}));
+await proev("PUT opptak med scener", 200, () =>
+  finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": scenereg.jsonBody.etag }, body: MED_SCENER })));
+
+const scene = await proev("GET /api/opptak/{id}/{sekunder} → 302", 302, () =>
+  finn("GET", "opptak/{id}/{sekunder}").handler(req({ params: { id: "jul-1987", sekunder: "764" }, som: "familie" })));
+const navTid = (m) => {
+  const p = new URL(String(m)).searchParams.get("nav");
+  return p ? JSON.parse(Buffer.from(decodeURIComponent(p), "base64").toString("utf8"))?.playbackOptions?.startTimeInSeconds : undefined;
+};
+const traff = navTid(scene.headers?.Location) === 764;
+console.log(`  ${traff ? "ok  " : "FEIL"}  ${"Scenelenken peker paa 12:44".padEnd(46)}`);
+if (!traff) { feilet++; console.log("         →", scene.headers?.Location); }
+
+// En innebygd nav i delingslenken maa vike for scenens tidspunkt, ellers
+// havner alle scenene paa samme sted.
+const overstyrt = await finn("GET", "opptak/{id}/{sekunder}").handler(req({ params: { id: "med-nav", sekunder: "300" }, som: "familie" }));
+const vek = navTid(overstyrt.headers?.Location) === 300;
+console.log(`  ${vek ? "ok  " : "FEIL"}  ${"Scenetid overstyrer innebygd nav".padEnd(46)}`);
+if (!vek) { feilet++; console.log("         →", overstyrt.headers?.Location); }
+
+// Hele videoen skal derimot respektere den innebygde tiden.
+const hel = await finn("GET", "opptak/{id}").handler(req({ params: { id: "med-nav" }, som: "familie" }));
+const urort2 = hel.headers?.Location === "https://mqx.sharepoint.com/:v:/g/x?nav=eyJhIjoxfQ==";
+console.log(`  ${urort2 ? "ok  " : "FEIL"}  ${"Hele videoen beholder sin egen nav".padEnd(46)}`);
+if (!urort2) { feilet++; console.log("         →", hel.headers?.Location); }
+
+await proev("GET scenelenke uten kapsel → 401", 401, () =>
+  finn("GET", "opptak/{id}/{sekunder}").handler(req({ params: { id: "jul-1987", sekunder: "764" }, som: "ingen" })));
+await proev("GET scenelenke med tull i tiden → 400", 400, () =>
+  finn("GET", "opptak/{id}/{sekunder}").handler(req({ params: { id: "jul-1987", sekunder: "12t" }, som: "familie" })));
+await proev("GET scenelenke lenger ut enn et doegn → 400", 400, () =>
+  finn("GET", "opptak/{id}/{sekunder}").handler(req({ params: { id: "jul-1987", sekunder: "99999" }, som: "familie" })));
+await proev("PUT opptak med scene uten tittel → 422", 422, () =>
+  finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": '"0x8DFEIL"' }, body: { opptak: [{ id: "x", tittel: "X", url: "https://mqx.sharepoint.com/x", scener: [{ start: 5, tittel: "" }] }] } })));
+
 console.log("\nCORS paa lagringskontoen");
 // Opplastingen gaar direkte fra nettleseren til Blob. Staar ikke nettstedets
 // adresse i reglene, feiler den med «Nettverksfeil» mens alt annet virker.

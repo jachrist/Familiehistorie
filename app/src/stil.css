@@ -1394,3 +1394,82 @@ mark {
     filter: brightness(1.06);
   }
 }
+
+/* --- scenelister --- */
+.scenefelt {
+  margin-top: 4px;
+}
+.scenefelt-topp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  color: var(--blekk-matt);
+  font-size: 0.85rem;
+}
+.scenefelt-panel {
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--flate-2);
+  border-radius: var(--radius);
+}
+.scenefelt-tekst {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.scenefelt-avviste {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+.scenefelt-avviste code {
+  font-size: 0.9em;
+}
+
+.sceneforhaand {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  max-height: 24rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--strek);
+  font-size: 0.88rem;
+}
+.sceneforhaand li {
+  display: grid;
+  grid-template-columns: 3rem 4rem minmax(0, 1fr);
+  gap: 8px;
+  padding: 3px 0;
+}
+.sceneforhaand-aar {
+  color: var(--blekk-matt);
+  font-variant-numeric: tabular-nums;
+}
+.sceneforhaand-tid {
+  color: var(--aksent);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.inndata-smal {
+  width: auto;
+  max-width: 14rem;
+}
+
+/*
+ * Scenelisten i en årstekst: tidspunktet er lenken, og på berøringsskjerm
+ * trenger den et treffområde som tåler en finger.
+ */
+.felt-tekst li a {
+  font-variant-numeric: tabular-nums;
+}
+@media (pointer: coarse) {
+  .felt-tekst li a {
+    display: inline-block;
+    padding: 6px 2px;
+  }
+  .felt-tekst li {
+    margin-bottom: 4px;
+  }
+}

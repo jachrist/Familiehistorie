@@ -463,6 +463,39 @@ domene, og en åpen omdirigering er en gave til den som vil få en phishing-lenk
 til å se ut som om den kommer fra familiens nettsted. Skal registeret peke et
 annet sted, utvid appinnstillingen `OPPTAK_VERTER` (kommaseparerte domener).
 
+### Scenelister
+
+Et langt opptak er lettere å finne fram i når årssiden lenker rett til scenene.
+Lim inn listen du skrev mens du så filmen — **Lim inn sceneliste** i registeret —
+og den tolkes til scener du ser gjennom før noe lagres.
+
+Tidspunktene får være rotete. Disse betyr alle det samme som linja ved siden av:
+
+| Du skrev | Tolkes som |
+|---|---|
+| `0.12.44` | 12:44 |
+| `0 0 1 45` | 1:45 |
+| `0 6 0 0.` | 6:00 |
+| `0.0.8.45` | 8:45 |
+| `1.00.50` | 1:00:50 |
+
+Regelen er å samle sifrene og lese dem fra høyre: to sekunder, to minutter,
+resten timer. En linje som `0.22.33 1. juledagslunsj` tolkes riktig — `1.` er et
+ordenstall i beskrivelsen, ikke en del av tiden.
+
+To linjetyper er ikke scener: **`Video: …`** blir tittel på opptaket, og **en
+linje med bare et årstall** skiller årene. Det siste betyr noe: et juleopptak
+fra 1987 fortsetter gjerne inn i 1988, og da får hver årsside bare sine egne
+scener.
+
+I årsredigeringen, under «Hva skjedde», står **Sett inn sceneliste** for de
+opptakene som har scener for dette året. Den skriver inn en punktliste med én
+lenke per scene.
+
+**Lenkene peker på tidspunktet, ikke på et scenenummer** — `/api/opptak/<id>/1992`.
+Omrokkerer du listen senere, fortsetter lenker som alt står i en årstekst å peke
+riktig sted.
+
 **Det registeret ikke gjør:** en innlogget kan følge omdirigeringen og kopiere
 den endelige adressen. Dette er en innpakning, ikke kryptografi. Vil du ha det
 strammere, bytt delingslenkene i SharePoint til «Bestemte personer» — da må hver

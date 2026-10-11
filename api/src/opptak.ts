@@ -81,14 +81,16 @@ export function sjekkUrl(raa: string): Urlsvar {
  * SharePoint bygger lenken sin.
  *
  * Bærer lenken allerede en `nav`, står den urørt: da er den kopiert fra
- * SharePoint med tidspunktet i, og den vet best.
+ * SharePoint med tidspunktet i, og den vet best. For en scenelenke gjelder det
+ * motsatte – da er tidspunktet hele poenget, og `overstyr` setter det uansett.
  *
  * Skulle avspilleren i din leietaker lese en annen parameter, er dette stedet å
  * endre – og inntil videre kan man alltid lime inn hele lenken fra SharePoints
  * delingsdialog og la `start` stå tom.
  */
-export function medStarttid(raa: string, sekunder?: number | null): string {
-  if (!sekunder || sekunder <= 0) return raa;
+export function medStarttid(raa: string, sekunder?: number | null, overstyr = false): string {
+  if (sekunder === undefined || sekunder === null) return raa;
+  if (sekunder <= 0 && !overstyr) return raa;
 
   let url: URL;
   try {
@@ -97,7 +99,7 @@ export function medStarttid(raa: string, sekunder?: number | null): string {
     return raa;
   }
 
-  if (url.searchParams.has("nav")) return raa;
+  if (url.searchParams.has("nav") && !overstyr) return raa;
 
   const nav = { playbackOptions: { startTimeInSeconds: Math.round(sekunder) } };
   url.searchParams.set("nav", Buffer.from(JSON.stringify(nav), "utf8").toString("base64"));

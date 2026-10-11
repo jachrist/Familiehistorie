@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Medieobjekt } from "../../../delt/typer.js";
 import { Apifeil, api, noekler } from "../api/klient.js";
 import { BAKGRUNNSFELT, bakgrunnSomHtml } from "../data/bakgrunn.js";
+import { sceneListeSomHtml, scenerFor } from "../scener.js";
 import { Medieliste } from "../komponenter/Medieliste.js";
 import { Opplastingskoe } from "../komponenter/Opplastingskoe.js";
 import { RikTekst } from "../komponenter/RikTekst.js";
@@ -316,6 +317,13 @@ export function RedigerAar() {
                     onSettInn={(html) => settInnBakgrunn(def.id, html)}
                   />
                 )}
+                {def.id === SCENEFELT && (
+                  <Scenelisteknapp
+                    aar={aar}
+                    naavaerende={felter[def.id] ?? ""}
+                    onSettInn={(html) => settInnBakgrunn(def.id, html)}
+                  />
+                )}
               </>
             ) : (
               <input
@@ -361,6 +369,15 @@ export function RedigerAar() {
     </main>
   );
 }
+
+/**
+ * Feltet scenelister settes inn i.
+ *
+ * «Hva skjedde» er der man forteller hva året inneholdt, og en liste over
+ * scener i årets film hører hjemme der. Vil man ha den et annet sted, er det
+ * denne linja som endres.
+ */
+const SCENEFELT = "hendelser";
 
 /**
  * Pakker løs tekst i et avsnitt.
@@ -437,5 +454,77 @@ function Melding({ tittel, children }: { tittel: string; children: React.ReactNo
         </p>
       </div>
     </main>
+  );
+}
+
+/**
+ * Setter inn scenelisten for et opptak, som lenker til hvert tidspunkt.
+ *
+ * Bare opptak som har scener for *dette* året vises. Et juleopptak fra 1987
+ * fortsetter gjerne inn i 1988, og da skal 1988-siden ikke få julaften med seg.
+ */
+function Scenelisteknapp({
+  aar,
+  naavaerende,
+  onSettInn,
+}: {
+  aar: number;
+  naavaerende: string;
+  onSettInn: (html: string) => void;
+}) {
+  const register = useQuery({ queryKey: noekler.opptak, queryFn: api.opptak });
+  const [valgt, settValgt] = useState("");
+
+  const aktuelle = (register.data?.opptak ?? [])
+    .map((o) => ({ opptak: o, scener: scenerFor(o.scener, aar) }))
+    .filter((x) => x.scener.length > 0);
+
+  if (aktuelle.length === 0) return null;
+
+  const gjeldende = aktuelle.find((x) => x.opptak.id === valgt) ?? aktuelle[0]!;
+  const html = sceneListeSomHtml(gjeldende.opptak.id, gjeldende.opptak.tittel, gjeldende.scener);
+
+  // Sammenligningen går på adressen til første scene, ikke på hele HTML-en.
+  // Saniteringen legger `target` og `rel` på hver lenke ved lagring, så den
+  // lagrede teksten er aldri tegn for tegn lik den vi nettopp lagde.
+  // Avsluttende hermetegn er med, ellers ville `…/19` også truffet `…/1992`.
+  const forste = gjeldende.scener[0];
+  const alt = forste !== undefined
+    && naavaerende.includes(`/api/opptak/${gjeldende.opptak.id}/${forste.start}"`);
+
+  return (
+    <p className="felt-handling">
+      {aktuelle.length > 1 && (
+        <>
+          <label className="skjult" htmlFor="velg-opptak">
+            Opptak
+          </label>
+          <select
+            id="velg-opptak"
+            className="inndata inndata-smal"
+            value={gjeldende.opptak.id}
+            onChange={(e) => settValgt(e.target.value)}
+          >
+            {aktuelle.map((x) => (
+              <option key={x.opptak.id} value={x.opptak.id}>
+                {x.opptak.tittel || x.opptak.id}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
+
+      <button type="button" className="lenkeknapp" disabled={alt} onClick={() => onSettInn(html)}>
+        {alt
+          ? `Scenelisten er satt inn`
+          : `Sett inn sceneliste (${gjeldende.scener.length} scener)`}
+      </button>
+
+      {!alt && (
+        <span className="felt-handling-hjelp">
+          Én lenke per scene, rett til tidspunktet.
+        </span>
+      )}
+    </p>
   );
 }

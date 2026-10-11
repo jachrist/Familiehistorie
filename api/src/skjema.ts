@@ -14,6 +14,7 @@ import sanitizeHtml from "sanitize-html";
 import { z } from "zod";
 import type { Feltskjema, Medieobjekt } from "../../delt/typer.js";
 import { ID_MONSTER, sjekkUrl } from "./opptak.js";
+import { AAR_MAKS, AAR_MIN } from "./svar.js";
 
 /** Bevisst liten liste. Redigering skal ikke kunne produsere vilkårlig markup. */
 const TILLATT: sanitizeHtml.IOptions = {
@@ -226,6 +227,17 @@ export const opptakSkjema = z.object({
         // et tidspunkt som ikke finnes.
         start: z.number().int().min(0).max(86_400).nullish(),
         notat: z.string().trim().max(500).optional(),
+        scener: z
+          .array(
+            z.object({
+              start: z.number().int().min(0).max(86_400),
+              tittel: z.string().trim().min(1).max(500),
+              aar: z.number().int().min(AAR_MIN).max(AAR_MAKS).nullish(),
+            })
+          )
+          // Et langt opptak kan ha mange scener, men ikke tusenvis.
+          .max(400)
+          .optional(),
       })
     )
     .max(500)

@@ -152,6 +152,21 @@ export interface TilgangslisteMedEtag extends Tilgangsliste {
  * videre. Da kan lenken byttes ett sted i stedet for i hver årsside den er
  * nevnt, og en som ikke har tilgang ser den aldri.
  */
+/**
+ * Én scene i et opptak.
+ *
+ * Listene lages for hånd mens man spoler gjennom filmen, og dekker gjerne mer
+ * enn ett år: et juleopptak fra 1987 fortsetter inn i 1988. Derfor har scenen
+ * sitt eget årstall, så hver årsside bare får sine egne.
+ */
+export interface Scene {
+  /** Sekunder inn i opptaket. */
+  start: number;
+  tittel: string;
+  /** `null` når listen ikke skiller på år. Da hører scenen til året man ser på. */
+  aar?: number | null;
+}
+
 export interface Opptak {
   /** Kortnavnet som står i lenken. Små bokstaver, tall og bindestrek. */
   id: string;
@@ -162,6 +177,8 @@ export interface Opptak {
   start?: number | null;
   /** Fritekst til den som vedlikeholder registeret. Vises ingen andre steder. */
   notat?: string;
+  /** Scenene i opptaket. Settes inn som lenkeliste i en årstekst. */
+  scener?: Scene[];
 }
 
 export interface Opptaksregister {

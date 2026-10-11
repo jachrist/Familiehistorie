@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Opptak as Opptaksrad } from "../../../delt/typer.js";
+import type { Opptak as Opptaksrad, Scene } from "../../../delt/typer.js";
 import { Apifeil, api, noekler } from "../api/klient.js";
 import { formatterVarighet, lesTid } from "../format.js";
+import { tolkSceneliste } from "../scener.js";
 
 /**
  * Registeret over opptak som ligger i SharePoint.
@@ -181,6 +182,13 @@ export function Opptak() {
                   />
                 </div>
 
+                <Scenefelt
+                  rad={rad}
+                  onScener={(scener, tittel) =>
+                    endre(i, rad.tittel.trim() ? { scener } : { scener, tittel, id: tilId(tittel) })
+                  }
+                />
+
                 <div className="opptaksrad-bunn">
                   {rad.id ? (
                     <button type="button" className="lenkeknapp" onClick={() => void kopier(rad.id)}>
@@ -257,4 +265,127 @@ export function Opptak() {
       )}
     </main>
   );
+}
+
+/**
+ * Scenelisten limes inn slik den ble skrevet.
+ *
+ * Listene blir til mens man spoler gjennom filmen og noterer for hånd, så
+ * tidspunktene er rotete – `0 0 1 45` og `0.0.8.45` betyr 1:45 og 8:45. Det er
+ * tolkerens jobb å forstå dem, ikke brukerens jobb å rette dem opp.
+ *
+ * Derfor vises resultatet før noe lagres: tolkningen er kvalifisert gjetning,
+ * og den som skrev listen er den eneste som kan se om den traff.
+ */
+function Scenefelt({
+  rad,
+  onScener,
+}: {
+  rad: Opptaksrad;
+  onScener: (scener: Scene[], tittel: string) => void;
+}) {
+  const [apen, settApen] = useState(false);
+  const [raa, settRaa] = useState("");
+
+  const tolkning = useMemo(() => (raa.trim() ? tolkSceneliste(raa) : undefined), [raa]);
+  const antall = rad.scener?.length ?? 0;
+
+  return (
+    <div className="scenefelt">
+      <div className="scenefelt-topp">
+        {antall > 0 ? (
+          <span>
+            {antall} {antall === 1 ? "scene" : "scener"}
+            {aarsspenn(rad.scener)}
+          </span>
+        ) : (
+          <span className="opptak-mangler">ingen sceneliste</span>
+        )}
+        <button type="button" className="lenkeknapp" onClick={() => settApen((a) => !a)}>
+          {apen ? "Lukk" : antall > 0 ? "Lim inn på nytt" : "Lim inn sceneliste"}
+        </button>
+      </div>
+
+      {apen && (
+        <div className="scenefelt-panel">
+          <p className="plakatvelger-hjelp">
+            Lim inn listen slik du skrev den. Tid først på linja, så beskrivelsen.
+            En linje med bare et årstall skiller årene, og «Video: …» blir tittel.
+          </p>
+          <label className="skjult" htmlFor={`scener-${rad.id || "ny"}`}>
+            Sceneliste
+          </label>
+          <textarea
+            id={`scener-${rad.id || "ny"}`}
+            className="inndata scenefelt-tekst"
+            rows={8}
+            placeholder={"Video: 1987 Jul, Nyttår, Bad\n1987\n0.00.00 Med jentene i badekaret\n0.12.44 Julemiddag hos mormor og beste"}
+            value={raa}
+            onChange={(e) => settRaa(e.target.value)}
+          />
+
+          {tolkning && (
+            <>
+              <p className="beskjed-liten">
+                {tolkning.scener.length} scener tolket
+                {tolkning.avviste.length > 0 && `, ${tolkning.avviste.length} linjer forstod jeg ikke`}
+                {tolkning.tittel && ` · tittel: «${tolkning.tittel}»`}
+              </p>
+
+              {tolkning.uordnede.length > 0 && (
+                <p className="beskjed-liten beskjed-merk">
+                  {tolkning.uordnede.length} scener kommer før den forrige i tid. Som
+                  regel er det en feillesing — se gjennom listen under.
+                </p>
+              )}
+
+              {tolkning.avviste.length > 0 && (
+                <ul className="beskjed-liten beskjed-feil scenefelt-avviste">
+                  {tolkning.avviste.map((a) => (
+                    <li key={a.linje}>
+                      Linje {a.linje}: {a.grunn} <code>{a.tekst.slice(0, 60)}</code>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {tolkning.scener.length > 0 && (
+                <>
+                  <ul className="sceneforhaand">
+                    {tolkning.scener.map((s, j) => (
+                      <li key={j}>
+                        {s.aar && <span className="sceneforhaand-aar">{s.aar}</span>}
+                        <span className="sceneforhaand-tid">{formatterVarighet(s.start)}</span>
+                        <span>{s.tittel}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="admin-handlinger">
+                    <button
+                      type="button"
+                      className="knapp"
+                      onClick={() => {
+                        onScener(tolkning.scener, tolkning.tittel ?? rad.tittel);
+                        settRaa("");
+                        settApen(false);
+                      }}
+                    >
+                      Bruk disse {tolkning.scener.length} scenene
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** ` · 1987–1988` når listen dekker flere år. Tom når den ikke gjør det. */
+function aarsspenn(scener: Scene[] | undefined): string {
+  const aar = [...new Set((scener ?? []).flatMap((s) => (s.aar ? [s.aar] : [])))].sort();
+  if (aar.length === 0) return "";
+  return aar.length === 1 ? ` · ${aar[0]}` : ` · ${aar[0]}–${aar.at(-1)}`;
 }
