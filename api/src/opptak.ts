@@ -1,11 +1,17 @@
 /**
- * Registeret over opptak som ligger utenfor nettstedet.
+ * Registeret over de fulle, uklippede opptakene.
  *
- * De fulle, uklippede opptakene ligger i et SharePoint-bibliotek, og spilles av
- * i SharePoints egen avspiller – den strømmer, og tåler formater og filstørrelser
- * en `<video>`-tag ikke gjør noe fornuftig med.
+ * Et opptak ligger ett av to steder, og registeret holder orden på hvilket:
  *
- * Delingslenken står likevel ikke i årsteksten. To grunner:
+ * **I vår egen `opptak`-container.** Dette er den raske veien, og den som bør
+ * velges. Nettleseren får videofila fra samme sted som resten av nettstedet,
+ * og en scenelenke lander på tidspunktet med én gang.
+ *
+ * **Bak en delingslenke til SharePoint.** Veien som fantes først. Den fungerer,
+ * men på iPad fanger OneDrive-appen lenken opp, og det blir noen trykk innom
+ * OneDrives eget nettsted før filmen vises.
+ *
+ * Delingslenken står uansett ikke i årsteksten. To grunner:
  *
  * **Den kan byttes.** En delingslenke kan utløpe eller trekkes tilbake. Står
  * den i teksten, må hver årsside som nevner opptaket redigeres. Står den her,
@@ -21,6 +27,7 @@
  */
 import type { Opptak, Opptaksregister } from "../../delt/typer.js";
 import { CONTAINER, STI, lesJson } from "./lager.js";
+import { opptakUrl } from "./sas.js";
 
 export const ID_MONSTER = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
@@ -48,6 +55,60 @@ export interface Urlsvar {
   ok: boolean;
   grunn?: string;
 }
+
+/**
+ * Stien til en fil i opptak-containeren.
+ *
+ * Sjekken fanger skrivefeil, ikke angrep: det er en redaktør som velger fila,
+ * og den velges fra listen over hva som faktisk ligger i containeren. Men en
+ * sti med et tomt ledd eller et kontrolltegn skal si fra her og nå, i stedet
+ * for å bli en uforståelig 404 fra Azure den dagen noen klikker på en
+ * scenelenke.
+ *
+ * Alt annet slipper gjennom. Tegn som `%` og `#` hører til i filnavn folk
+ * faktisk lager, og blir kodet riktig når adressen bygges – en strengere regel
+ * ville bare gjort det umulig å velge en fil som står i listen.
+ */
+export function sjekkFil(raa: string): Urlsvar {
+  if (raa.startsWith("/") || raa.endsWith("/")) {
+    return { ok: false, grunn: "Stien kan ikke begynne eller slutte med skråstrek." };
+  }
+  if (raa.split("/").some((d) => d === "" || d === "." || d === "..")) {
+    return { ok: false, grunn: "Stien har et tomt eller ugyldig ledd." };
+  }
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\\]/.test(raa)) {
+    return { ok: false, grunn: "Stien inneholder tegn som ikke hører hjemme i et filnavn." };
+  }
+  return { ok: true };
+}
+
+/**
+ * Innholdstypen vi ber Blob Storage svare med.
+ *
+ * Filene lastes opp med azcopy, som gjetter typen ut fra endelsen og noen
+ * ganger bommer. Bommer den, laster nettleseren videoen ned i stedet for å
+ * spille den. Her settes typen ut fra endelsen igjen – og kjenner vi ikke
+ * endelsen, lar vi blobens egen stå.
+ */
+export function innholdstype(sti: string): string | undefined {
+  const endelse = sti.toLowerCase().split(".").pop() ?? "";
+  return TYPER[endelse];
+}
+
+const TYPER: Record<string, string> = {
+  mp4: "video/mp4",
+  m4v: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+  mkv: "video/x-matroska",
+  avi: "video/x-msvideo",
+  wmv: "video/x-ms-wmv",
+  mpg: "video/mpeg",
+  mpeg: "video/mpeg",
+  m2ts: "video/mp2t",
+  mts: "video/mp2t",
+};
 
 export function sjekkUrl(raa: string): Urlsvar {
   let url: URL;
@@ -165,11 +226,25 @@ function startFraNav(nav: string | null): number | undefined {
   }
 }
 
-/** Velger form etter opptakets innstilling. `direkte` er standard. */
-export function avspillingsUrl(
-  opptak: { url: string; avspilling?: "direkte" | "viewer" | null },
+/**
+ * Adressen et klikk på en opptakslenke skal ende på.
+ *
+ * Ligger opptaket i vårt eget lager, signeres en kortlevd adresse rett til
+ * fila. Ellers er det delingslenken, i den formen opptaket er satt opp med.
+ */
+export async function avspillingsUrl(
+  opptak: Pick<Opptak, "url" | "fil" | "avspilling">,
   sekunder?: number | null
-): string {
+): Promise<string> {
+  if (opptak.fil) {
+    const url = await opptakUrl(opptak.fil, innholdstype(opptak.fil));
+    // Fragmentet sendes aldri til Azure, så signaturen er urørt – men
+    // nettleseren leser det og spoler dit med én gang.
+    return sekunder && sekunder > 0 ? `${url}#t=${Math.round(sekunder)}` : url;
+  }
+
+  if (!opptak.url) return "/";
+
   return opptak.avspilling === "viewer"
     ? medStarttid(opptak.url, sekunder, sekunder !== undefined && sekunder !== null)
     : direkteUrl(opptak.url, sekunder);

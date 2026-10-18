@@ -15,10 +15,20 @@ import {
   generateBlobSASQueryParameters,
   type UserDelegationKey,
 } from "@azure/storage-blob";
-import { blobtjeneste, delteNokler } from "./lager.js";
+import { CONTAINER, blobtjeneste, delteNokler } from "./lager.js";
 
 export const LESE_MINUTTER = 60;
 export const SKRIVE_MINUTTER = 15;
+
+/**
+ * Opptakene får lengre levetid enn annet media.
+ *
+ * En SAS som utløper mens filmen spilles, stopper avspillingen midt i: hvert
+ * sprang i tidslinjen er en ny forespørsel med samme signatur. Seks timer
+ * dekker det lengste opptaket med god margin, og den som sitter igjen med
+ * adressen etterpå har uansett rollen som skulle til for å få den.
+ */
+export const OPPTAK_MINUTTER = 6 * 60;
 
 interface BufretNokkel {
   nokkel: UserDelegationKey;
@@ -46,11 +56,25 @@ async function delegeringsnokkel(): Promise<BufretNokkel> {
   return bufret;
 }
 
+/**
+ * Svarhoder Blob Storage skal sende i stedet for blobens egne.
+ *
+ * Brukes for opptakene, som lastes opp med azcopy og ikke gjennom appen. Setter
+ * azcopy `application/octet-stream` på en .mov, laster nettleseren den ned i
+ * stedet for å spille den av – og det er ikke noe vi kan rette fra appen uten
+ * å skrive om blobens metadata. Her overstyres det per forespørsel.
+ */
+interface Svarhoder {
+  contentType?: string;
+  contentDisposition?: string;
+}
+
 async function signer(
   containerNavn: string,
   blobNavn: string,
   tillatelser: BlobSASPermissions,
-  minutter: number
+  minutter: number,
+  hoder?: Svarhoder
 ): Promise<string> {
   const utloper = new Date(Date.now() + minutter * 60_000);
   // Litt slingringsmonn bakover dekker klokkeavvik mellom Azure-tjenester.
@@ -62,6 +86,7 @@ async function signer(
     permissions: tillatelser,
     startsOn: starter,
     expiresOn: utloper,
+    ...hoder,
   };
 
   const nokler = delteNokler();
@@ -82,6 +107,23 @@ async function signer(
 /** Lese-URL for én fil. `sti` er relativ til containeren. */
 export function leseUrl(containerNavn: string, sti: string): Promise<string> {
   return signer(containerNavn, sti, BlobSASPermissions.from({ read: true }), LESE_MINUTTER);
+}
+
+/**
+ * Lese-URL for et helt opptak, klar til å spilles av i nettleseren.
+ *
+ * `inline` sier at fila skal vises, ikke lastes ned. Innholdstypen settes bare
+ * når vi kjenner filendelsen; for en ukjent endelse står blobens egen, som er
+ * bedre enn en gjetning.
+ */
+export function opptakUrl(sti: string, innholdstype?: string): Promise<string> {
+  return signer(
+    CONTAINER.opptak,
+    sti,
+    BlobSASPermissions.from({ read: true }),
+    OPPTAK_MINUTTER,
+    { contentType: innholdstype, contentDisposition: "inline" }
+  );
 }
 
 /** Skrive-URL for én fil. Tillater opprettelse og blokkvis opplasting. */

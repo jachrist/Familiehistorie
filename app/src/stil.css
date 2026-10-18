@@ -1476,3 +1476,27 @@ mark {
 .opptak-hjelp {
   margin: 2px 0 0 !important;
 }
+
+/*
+ * De to valgene for hvor et opptak ligger. Side om side når det er plass,
+ * under hverandre når det ikke er det – og aldri så tett at en finger treffer
+ * feil av dem.
+ */
+.kildevalg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  margin: 0 0 8px;
+}
+.kildevalg .admin-valg {
+  margin: 0;
+}
+@media (pointer: coarse) {
+  .kildevalg .admin-valg input[type="radio"] {
+    width: 20px;
+    height: 20px;
+  }
+  .kildevalg {
+    gap: 8px 22px;
+  }
+}

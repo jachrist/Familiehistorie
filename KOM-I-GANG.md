@@ -413,55 +413,126 @@ utrulling. Teksten er skrevet ned fra hukommelsen — årstall for norske og
 særlig Oslo-lokale hendelser er verdt en kontroll før de blir stående som
 familiens historie.
 
-## Opptak i SharePoint
+## Opptak
 
-Fulle, uklippede opptak hører ikke hjemme i mediegalleriet. De er store, ofte i
-formater nettleseren ikke spiller av, og SharePoints egen avspiller gjør en
-bedre jobb med dem enn en `<video>`-tag. Men **delingslenken skal ikke stå i
-årsteksten.**
+Fulle, uklippede opptak hører ikke hjemme i mediegalleriet. De er store, ofte
+timelange, og ofte i formater som må behandles forsiktig. De står i et eget
+register — og **adressen til selve filmen skal ikke stå i årsteksten.**
 
 To grunner. En «alle med lenken»-lenke *er* legitimasjonen — den som har
 adressen, kommer inn — og står den i sidekilden, ligger den der for enhver som
-får tak i siden. Og en delingslenke kan utløpe eller trekkes tilbake; står den i
-teksten, må hver årsside som nevner opptaket redigeres.
+får tak i siden. Og en adresse kan byttes; står den i teksten, må hver årsside
+som nevner opptaket redigeres.
 
-Registeret under `/opptak` løser begge. Der ligger delingslenken, og i teksten
-står i stedet:
+Registeret under `/opptak` løser begge. Der ligger adressen, og i teksten står i
+stedet:
 
 ```
 /api/opptak/bryllupet-i-vang-kirke
 ```
 
-Endepunktet krever innlogging og sender deg videre. Byttes lenken, endres den
+Endepunktet krever innlogging og sender deg videre. Flyttes filmen, endres det
 ett sted.
 
-Sett den inn med lenkeknappen i redigeringsfeltet — den godtar `https://`,
+Sett lenken inn med lenkeknappen i redigeringsfeltet — den godtar `https://`,
 `mailto:` og adresser som begynner med `/`, altså sider på dette nettstedet.
+
+### Hvor filmen ligger
+
+Hvert opptak har nøyaktig én kilde, og du velger den i registeret.
+
+**Fil i lageret** er den raske veien, og den du bør velge. Filmen ligger i
+lagringskontoens `opptak`-container, appen signerer en kortlevd adresse rett
+til den, og nettleseren spiller den av der og da. En scenelenke lander på
+sekundet — ingen mellomstasjon.
+
+**Delingslenke fra SharePoint** er veien som fantes først. Den virker, men på
+iPad fanger OneDrive-appen lenken opp: du er innom OneDrives startside og må
+svare på et spørsmål om å åpne i nettleseren før filmen vises.
+
+Du kan blande fritt — noen opptak i lageret, andre i SharePoint — men ikke
+innenfor ett og samme opptak. Både fil og lenke på samme opptak lar det stå
+uavgjort hvilken av dem en scenelenke skal åpne, og registeret avviser det.
+
+### Last opp opptakene med azcopy
+
+Filene går ikke gjennom nettleseren. Opplastingsboksen i appen tar én fil om
+gangen, med to gigabyte som tak og uten å kunne ta opp tråden etter et brudd —
+det er feil verktøy for et arkiv på nittti gigabyte.
+
+[`azcopy`](https://learn.microsoft.com/azure/storage/common/storage-use-azcopy-v10)
+er riktig verktøy. Den laster opp parallelt, gjenopptar etter avbrudd, og kan
+kjøres om igjen uten å sende det samme to ganger.
+
+0. **Sjekk at containeren finnes.** `opptak` kom til etter at lagringskontoen
+   ble opprettet. Står den ikke under *Containers*, kjør `infra/main.bicep` på
+   nytt — se `infra/LES-MEG.md`, som også sier hvorfor `tillatteOpphav` må være
+   med på den kommandoen.
+
+1. **Lag en SAS for containeren.** I Azure-portalen: lagringskontoen →
+   *Storage browser* → *Blob containers* → `opptak` → *Shared access tokens*.
+   Kryss av **Read**, **Add**, **Create**, **Write** og **List**, sett utløp et
+   stykke fram i tid, og kopier *Blob SAS URL*.
+
+2. **Kjør opplastingen.** `sync` laster opp det som mangler, og hopper over det
+   som alt ligger der — den tåler å bli avbrutt og startet på nytt.
+
+   ```powershell
+   azcopy sync "D:\Opptak" "https://<konto>.blob.core.windows.net/opptak?<sas>" --recursive
+   ```
+
+   Mappestrukturen under `D:\Opptak` følger med, så `1987\Jul.mp4` havner som
+   `1987/Jul.mp4` i containeren og står slik i nedtrekket i registeret.
+
+3. **Velg filen** i registeret under *Hvor ligger opptaket → Fil i lageret*.
+   Nedtrekket viser det som faktisk ligger der, med størrelse.
+
+Tre ting verdt å vite:
+
+- **Innholdstypen rettes opp underveis.** Setter azcopy `application/octet-stream`
+  på en `.mov`, ville nettleseren lastet filen ned i stedet for å spille den.
+  Appen overstyrer typen i den signerte adressen, ut fra filendelsen.
+- **Erstatter du en fil, blir den gamle liggende som en versjon** — og det
+  betales for den. Livssyklusregelen rydder dem etter angrefristen (30 dager).
+- **Avspilling koster trafikk ut av Azure.** Det er noen øre per gigabyte etter
+  de første hundre i måneden. En film på to gigabyte sett én gang er i
+  størrelsesorden halvannen krone. SharePoint-veien har ikke denne kostnaden —
+  det er den ene tingen den har for seg.
+
+Containeren er bevisst holdt utenfor to ting: tømmeverktøyet på admin-siden
+lister aldri den, og sikkerhetskopien tar registeret, ikke filmene. Nittti
+gigabyte skal ikke kunne forsvinne ved et uhell, og ikke kopieres i stillhet
+heller.
+
+### Delingslenker fra SharePoint
 
 **OneDrive for Business er SharePoint.** Delingslenker derfra ligger på
 `<leietaker>-my.sharepoint.com`, som allerede er tillatt. Personlige
 OneDrive-lenker på `1drv.ms` er det ikke — de må i så fall legges til i
 `OPPTAK_VERTER`.
 
-| Felt | Hva det er |
-|---|---|
-| Tittel | Bare til deg. Id-en lages automatisk av den |
-| Delingslenke | URL-en fra SharePoint, slik du kopierte den |
-| Id | Det som står i lenken. Endre den før du limer den inn et sted |
-| Start ved | Valgfritt tidspunkt, `1:23` eller `83` |
-| Notat | Til den som vedlikeholder registeret. Vises ingen andre steder |
-
-**Start ved** legger på `nav`-parameteren SharePoints avspiller leser
-starttidspunktet fra — samme parameter «Del med starttidspunkt» i SharePoint
-bruker. Bærer lenken allerede en `nav`, står den urørt: da er tidspunktet
-kopiert fra SharePoint, og den vet best. Virker det ikke i din leietaker, lim
-inn hele lenken fra SharePoints delingsdialog og la feltet stå tomt — og si fra,
-så er det én linje i `api/src/opptak.ts` som må endres.
-
 **Lenken må peke på `sharepoint.com`.** Endepunktet omdirigerer fra ditt eget
 domene, og en åpen omdirigering er en gave til den som vil få en phishing-lenke
 til å se ut som om den kommer fra familiens nettsted. Skal registeret peke et
 annet sted, utvid appinnstillingen `OPPTAK_VERTER` (kommaseparerte domener).
+Filer i lageret er ikke berørt av dette.
+
+### Felt i registeret
+
+| Felt | Hva det er |
+|---|---|
+| Tittel | Bare til deg. Id-en lages automatisk av den |
+| Hvor ligger opptaket | Fil i lageret, eller delingslenke fra SharePoint |
+| Id | Det som står i lenken. Endre den før du limer den inn et sted |
+| Start ved | Valgfritt tidspunkt, `1:23` eller `83` |
+| Notat | Til den som vedlikeholder registeret. Vises ingen andre steder |
+
+**Start ved** gjelder opptaket som helhet — altså `/api/opptak/<id>` uten
+tidspunkt. For en fil i lageret blir det et mediefragment nettleseren spoler
+til. For en delingslenke blir det `nav`-parameteren SharePoints avspiller leser
+starttidspunktet fra, samme parameter «Del med starttidspunkt» bruker. Bærer
+lenken allerede en `nav`, står den urørt: da er tidspunktet kopiert fra
+SharePoint, og den vet best.
 
 ### Scenelister
 
@@ -494,30 +565,35 @@ lenke per scene.
 
 ### Hvordan opptaket åpnes
 
-Normalt får nettleseren selve videofila — `?download=1#t=<sekunder>` — og
-starter sin egen spiller på riktig sekund med ett trykk.
+**Lenkene peker på tidspunktet, ikke på et scenenummer** —
+`/api/opptak/<id>/1992`. Omrokkerer du listen senere, fortsetter lenker som alt
+står i en årstekst å peke riktig sted.
 
-Alternativet er OneDrives nettsted, som er en hel applikasjon: den må lastes,
-autentisere og slå opp delingstokenet før et eneste bilde vises. Merkbart
-tregere, særlig på iPad.
+For **en fil i lageret** signerer appen en adresse rett til filen, med
+`#t=<sekunder>` på slutten. Nettleseren åpner sin egen spiller og spoler dit.
+Adressen varer seks timer — lenge nok til at den lengste filmen ikke stopper
+midt i.
 
-Kryss av **«Åpne i OneDrive-spilleren»** på et opptak når den direkte veien
-ikke virker. Det skjer når nettleseren ikke kan dekode formatet selv — en
-gammel `.mov` eller `.wmv` — for OneDrive transkoder underveis.
+For **en delingslenke** får nettleseren normalt selve videofila
+(`?download=1#t=<sekunder>`). Alternativet er OneDrives nettsted, som er en hel
+applikasjon: den må lastes, autentisere og slå opp delingstokenet før et eneste
+bilde vises. Merkbart tregere, særlig på iPad.
 
-**To ting bryter den direkte veien:** hvis delingslenken har «blokker
-nedlasting» slått på, og hvis filen ikke er i et format nettleseren kjenner.
-Begge gir avspilling som ikke starter; begge løses med avkrysningsboksen eller
-ved å transkode filen.
+Kryss av **«Åpne i OneDrive-spilleren»** når den direkte veien ikke virker.
+To ting bryter den: «blokker nedlasting» på delingslenken, og et format
+nettleseren ikke kan dekode selv — en gammel `.mov` eller `.wmv`. OneDrive
+transkoder underveis og klarer begge.
 
-**Lenkene peker på tidspunktet, ikke på et scenenummer** — `/api/opptak/<id>/1992`.
-Omrokkerer du listen senere, fortsetter lenker som alt står i en årstekst å peke
-riktig sted.
+Et opptak i lageret har ingen slik reserveløsning, for der er det ingen som
+transkoder. Spiller filen ikke av, må den transkodes før den lastes opp — se
+**Video** lenger opp.
 
 **Det registeret ikke gjør:** en innlogget kan følge omdirigeringen og kopiere
-den endelige adressen. Dette er en innpakning, ikke kryptografi. Vil du ha det
-strammere, bytt delingslenkene i SharePoint til «Bestemte personer» — da må hver
-enkelt autentisere seg mot Microsoft — uten å røre en eneste årstekst.
+den endelige adressen. Dette er en innpakning, ikke kryptografi. For en fil i
+lageret utløper den kopierte adressen etter seks timer; for en delingslenke
+gjør den ikke det, og vil du ha det strammere, bytt delingslenkene i SharePoint
+til «Bestemte personer» — da må hver enkelt autentisere seg mot Microsoft —
+uten å røre en eneste årstekst.
 
 ## Hva som bevisst ikke virker ennå
 

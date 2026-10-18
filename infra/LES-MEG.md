@@ -74,9 +74,10 @@ Skriptet er idempotent — kjøres det på nytt, oppdateres ressursene i stedet 
 | Container `innhold` | `felter.json`, `indeks.json`, `aar/*.json` |
 | Container `media` | Web-størrelse bilder, miniatyrer, video, plakatbilder |
 | Container `originaler` | Bildeoriginaler i full oppløsning |
+| Container `opptak` | Fulle, uklippede opptak. Lastes opp med `azcopy`, ikke gjennom appen |
 | Tabell `otpkoder` | Engangskoder og rate-limiting (tas i bruk i trinn 9) |
 | Blob-versjonering + 30 dagers soft delete | Angrerett uten versjonshistorikk i appen |
-| Livssyklusregler | Originaler til Archive, gamle versjoner til Cool |
+| Livssyklusregler | Originaler til Archive, gamle versjoner til Cool, gamle versjoner av opptak slettes etter angrefristen |
 | Static Web App, gratisplanen | Nettstedet og API-et |
 
 **Hvorfor originalene har egen container.** Azures livssyklusregler treffer på
@@ -84,6 +85,25 @@ sti, ikke filendelse. En regel som arkiverte «alt under `media/`» ville tatt m
 web-versjonene og videoen appen faktisk serverer — og Archive-nivået må
 rehydreres i timevis før det kan leses. Å skille dem i to containere gjør at en
 feilkonfigurert regel ikke kan ramme det som vises.
+
+**`opptak` har egen container av samme grunn, og én til:** tømmeverktøyet på
+admin-siden lister `innhold`, `media` og `originaler`. Nittti gigabyte film
+skal ikke kunne bli med på en opprydding ved et uhell.
+
+Containeren kom til etter at kontoen ble opprettet. Er den ikke der, kjør malen
+på nytt — den er idempotent og rører ikke det som alt ligger i kontoen:
+
+```bash
+az deployment group create \
+  --resource-group <ressursgruppe> \
+  --template-file infra/main.bicep \
+  --parameters prefiks=<prefiks> \
+    tillatteOpphav='["https://<swa-navn>.azurestaticapps.net","https://<ditt-domene>"]'
+```
+
+`tillatteOpphav` må være med: listen erstattes i sin helhet, og utelates den,
+står kontoen igjen uten CORS-regler og opplasting fra nettleseren slutter å
+virke.
 
 ## Utrulling når appen ble opprettet frakoblet
 

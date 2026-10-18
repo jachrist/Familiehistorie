@@ -21,6 +21,13 @@ export const CONTAINER = {
   media: "media",
   originaler: "originaler",
   sikkerhetskopi: "sikkerhetskopi",
+  /**
+   * De fulle opptakene. Egen container av to grunner: tømmeverktøyet lister
+   * innhold, media og originaler, og skal aldri kunne ta med nittti gigabyte
+   * film på kjøpet – og livssyklusregelen som arkiverer bildeoriginaler
+   * treffer stier, ikke filendelser.
+   */
+  opptak: "opptak",
 } as const;
 
 export const STI = {
@@ -208,6 +215,11 @@ async function stromTilTekst(strom: NodeJS.ReadableStream | undefined): Promise<
 /** Alle blobstier i en container, med valgfritt prefiks. */
 export async function listBlober(containernavn: string, prefiks = ""): Promise<string[]> {
   return (await listMedStorrelse(containernavn, prefiks)).map((b) => b.sti);
+}
+
+/** Finnes bloben? Containeren trenger ikke finnes – da gjør den ikke det. */
+export async function blobFinnes(containernavn: string, sti: string): Promise<boolean> {
+  return container(containernavn).getBlockBlobClient(sti).exists();
 }
 
 /**

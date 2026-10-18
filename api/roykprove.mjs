@@ -444,6 +444,76 @@ const helOk = h.includes("download=1") && !h.includes("#t=");
 console.log(`  ${helOk ? "ok  " : "FEIL"}  ${"Hele videoen: ingen #t naar start mangler".padEnd(46)}`);
 if (!helOk) { feilet++; console.log("         →", h); }
 
+console.log("\nOpptak i vaart eget lager");
+// Den raske veien: filmen ligger hos oss, og scenelenken signerer en adresse
+// rett til bloben. Ingen OneDrive-app som fanger lenken opp underveis.
+const { blobtjeneste } = await import("./dist/src/lager.js");
+const FILSTI = "1987/jul-og-nyttaar.mov";
+const filklient = blobtjeneste().getContainerClient(CONTAINER.opptak).getBlockBlobClient(FILSTI);
+await filklient.upload("ikke en ekte film", 17, {
+  // Slik azcopy kan finne paa aa merke en .mov. Overstyringen i SAS-en er
+  // nettopp for at dette ikke skal bli en nedlasting i stedet for avspilling.
+  blobHTTPHeaders: { blobContentType: "application/octet-stream" },
+});
+
+const EGET = { opptak: [
+  { id: "eget-lager", tittel: "Jul 1987", fil: FILSTI, scener: [{ start: 764, tittel: "Julemiddag" }] },
+]};
+const egetreg = await finn("GET", "opptak").handler(req({}));
+await proev("PUT opptak med fil i lageret", 200, () =>
+  finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": egetreg.jsonBody.etag }, body: EGET })));
+
+const filsvar = await proev("GET /api/opptak-filer", 200, () =>
+  finn("GET", "opptak-filer").handler(req({})));
+const lister = (filsvar.jsonBody?.filer ?? []).some((f) => f.sti === FILSTI && f.bytes === 17);
+console.log(`  ${lister ? "ok  " : "FEIL"}  ${"Filen staar i listen med stoerrelse".padEnd(46)}`);
+if (!lister) { feilet++; console.log("         →", JSON.stringify(filsvar.jsonBody)); }
+await proev("GET /api/opptak-filer som familie → 403", 403, () =>
+  finn("GET", "opptak-filer").handler(req({ som: "familie" })));
+
+const eget = await sted("eget-lager", 764);
+const pekerPaaBlob = eget.includes(`/${CONTAINER.opptak}/1987/jul-og-nyttaar.mov?`);
+console.log(`  ${pekerPaaBlob ? "ok  " : "FEIL"}  ${"Scenelenken peker rett paa bloben".padEnd(46)}`);
+if (!pekerPaaBlob) { feilet++; console.log("         →", eget); }
+
+const signert = /[?&]sig=/.test(eget) && /[?&]se=/.test(eget);
+console.log(`  ${signert ? "ok  " : "FEIL"}  ${"Adressen er signert og utloeper".padEnd(46)}`);
+if (!signert) { feilet++; console.log("         →", eget); }
+
+// Uten disse to spiller ingenting av: rsct retter opp en feilmerket blob,
+// rscd sier at den skal vises og ikke lastes ned.
+const sok = new URL(eget.split("#")[0]).searchParams;
+const hoder = sok.get("rsct") === "video/quicktime" && sok.get("rscd") === "inline";
+console.log(`  ${hoder ? "ok  " : "FEIL"}  ${"SAS-en overstyrer innholdstype og -form".padEnd(46)}`);
+if (!hoder) { feilet++; console.log("         →", `rsct=${sok.get("rsct")} rscd=${sok.get("rscd")}`); }
+
+const tidOk = eget.endsWith("#t=764");
+console.log(`  ${tidOk ? "ok  " : "FEIL"}  ${"Scenetiden ligger i mediefragmentet".padEnd(46)}`);
+if (!tidOk) { feilet++; console.log("         →", eget); }
+
+const helFil = await sted("eget-lager");
+console.log(`  ${!helFil.includes("#t=") ? "ok  " : "FEIL"}  ${"Hele opptaket: ingen #t".padEnd(46)}`);
+if (helFil.includes("#t=")) { feilet++; console.log("         →", helFil); }
+
+// En fil som er flyttet eller doept om skal si fra med en setning, ikke med en
+// tom feilmelding fra Azure midt i avspillingen.
+await filklient.delete();
+const vekk = await proev("GET scenelenke naar fila er borte → 404", 404, () =>
+  finn("GET", "opptak/{id}/{sekunder}").handler(req({ params: { id: "eget-lager", sekunder: "764" }, som: "familie" })));
+const forklarer = String(vekk.body ?? "").includes("ligger ikke i lageret");
+console.log(`  ${forklarer ? "ok  " : "FEIL"}  ${"Siden sier at fila mangler i lageret".padEnd(46)}`);
+if (!forklarer) feilet++;
+
+// Et opptak har noeyaktig én kilde. Begge deler lar det staa uavgjort hvilken
+// av dem en scenelenke skal aapne.
+const ugyldig = (o) => finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": '"0x8DFEIL"' }, body: { opptak: [o] } }));
+await proev("PUT opptak med baade fil og lenke → 422", 422, () =>
+  ugyldig({ id: "begge", tittel: "Begge", fil: "a.mp4", url: "https://mqx.sharepoint.com/:v:/g/a" }));
+await proev("PUT opptak uten kilde → 422", 422, () =>
+  ugyldig({ id: "ingen-kilde", tittel: "Ingen kilde" }));
+await proev("PUT opptak med sti ut av containeren → 422", 422, () =>
+  ugyldig({ id: "rar-sti", tittel: "Rar sti", fil: "../innhold/tilgang.json" }));
+
 console.log("\nCORS paa lagringskontoen");
 // Opplastingen gaar direkte fra nettleseren til Blob. Staar ikke nettstedets
 // adresse i reglene, feiler den med «Nettverksfeil» mens alt annet virker.

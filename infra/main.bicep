@@ -111,6 +111,21 @@ resource sikkerhetskopi 'Microsoft.Storage/storageAccounts/blobServices/containe
   }
 }
 
+// De fulle opptakene, lastet opp med azcopy. Egen container av samme grunn som
+// sikkerhetskopiene: tømmeverktøyet lister innhold, media og originaler, og
+// nittti gigabyte film skal ikke kunne bli med på en opprydding ved et uhell.
+//
+// Ingen livssyklusregel her. Archive-nivået er billigere, men må rehydreres i
+// timevis før en fil kan leses, og en scenelenke som svarer «kom tilbake i
+// morgen» er ikke en scenelenke.
+resource opptak 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobtjeneste
+  name: 'opptak'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 resource tabelltjeneste 'Microsoft.Storage/storageAccounts/tableServices@2023-05-01' = {
   parent: lager
   name: 'default'
@@ -153,6 +168,29 @@ resource livslop 'Microsoft.Storage/storageAccounts/managementPolicies@2023-05-0
             }
           }
         }
+        // Versjonering gjelder hele kontoen, og en overskrevet video blir
+        // liggende som en gammel versjon det betales for. For et JSON-dokument
+        // er det noen kilobyte og verdt det; for nittti gigabyte film er det
+        // ikke det – og originalene ligger uansett på maskinen de ble lastet
+        // opp fra. Angrefristen er den samme som for alt annet.
+        {
+          name: 'opptak-gamle-versjoner-slettes'
+          enabled: true
+          type: 'Lifecycle'
+          definition: {
+            filters: {
+              blobTypes: ['blockBlob']
+              prefixMatch: ['opptak/']
+            }
+            actions: {
+              version: {
+                delete: {
+                  daysAfterCreationGreaterThan: angredager
+                }
+              }
+            }
+          }
+        }
         {
           name: 'gamle-versjoner-til-cool'
           enabled: true
@@ -179,3 +217,4 @@ output lagernavn string = lager.name
 output innholdContainer string = innhold.name
 output mediaContainer string = media.name
 output originalerContainer string = originaler.name
+output opptakContainer string = opptak.name

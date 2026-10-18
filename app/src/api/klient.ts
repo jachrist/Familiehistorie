@@ -14,6 +14,7 @@ import type {
   Opplastingsforesporsel,
   Opplastingssvar,
   Opptak,
+  Opptaksfil,
   OpptaksregisterMedEtag,
   Ryddesvar,
   Sikkerhetskopi,
@@ -98,6 +99,9 @@ export const api = {
   /** `verter` er hvilke domener registeret får peke på. Vises som hjelpetekst. */
   opptak: () => hent<OpptaksregisterMedEtag & { verter: string[] }>("/api/opptak"),
 
+  /** Filene som ligger klare i opptak-containeren. Bare for redaktører. */
+  opptaksfiler: () => hent<{ filer: Opptaksfil[] }>("/api/opptak-filer"),
+
   lagreOpptak: (opptak: Opptak[], etag: string) =>
     hent<OpptaksregisterMedEtag>("/api/opptak", {
       method: "PUT",
@@ -179,6 +183,7 @@ export const noekler = {
   meg: ["meg"] as const,
   tilgang: ["tilgang"] as const,
   opptak: ["opptak"] as const,
+  opptaksfiler: ["opptaksfiler"] as const,
   indeks: ["indeks"] as const,
   sikkerhetskopier: ["sikkerhetskopier"] as const,
   felter: ["felter"] as const,

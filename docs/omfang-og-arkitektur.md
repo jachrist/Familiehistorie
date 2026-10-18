@@ -305,6 +305,9 @@ media/                      (privat)
 
 originaler/                 (privat, Archive-nivå)
   1972/01HQ….jpg            bildeoriginal i full oppløsning
+
+opptak/                     (privat, lastet opp med azcopy)
+  1987/Jul og nyttaar.mp4   fullt, uklippet opptak
 ```
 
 **Hvorfor originalene har egen container.** Azures livssyklusregler treffer på
@@ -312,6 +315,15 @@ sti, ikke på filendelse. En regel som arkiverte «alt under `media/`» ville ta
 med web-versjonene og videoen appen faktisk serverer — og Archive-nivået må
 rehydreres i timevis før det kan leses. Med to containere kan en
 feilkonfigurert regel ikke ramme det som vises.
+
+**Hvorfor opptakene har egen container.** Samme logikk, og én til:
+tømmeverktøyet på admin-siden lister `innhold`, `media` og `originaler`. Et
+arkiv på nittti gigabyte skal ikke kunne bli med på en opprydding. Filene
+lastes opp utenom appen, med `azcopy` — opplastingsboksen i nettleseren tar én
+fil om gangen, med to gigabyte som tak og uten å kunne ta opp tråden etter et
+brudd. Egen livssyklusregel sletter gamle versjoner her etter angrefristen; for
+et JSON-dokument er en gammel versjon noen kilobyte, for en film er den ikke
+det.
 
 I samme lagringskonto brukes i tillegg **Table Storage** til engangskoder, forsøkstellere
 og rate-limiting ([§9.3](#93-innloggingsflyten)) — kortlevd driftsdata som ikke hører
@@ -321,7 +333,7 @@ hjemme blant årsdokumentene.
 
 - **Blob-versjonering på** — gir angrerett på feilredigering og sletting uten at det må bygges versjonshistorikk i appen.
 - **Soft delete, 30 dager** — for både blob og container.
-- **Livssyklusregler**: hele `originaler`-containeren til Archive; tidligere versjoner til Cool etter 30 dager.
+- **Livssyklusregler**: hele `originaler`-containeren til Archive; tidligere versjoner til Cool etter 30 dager; gamle versjoner i `opptak` slettes etter angrefristen.
 - **Ingen anonym lesetilgang** på kontoen.
 - Redundans **LRS** holder når blob-versjonering og en separat kopi ([§13](#sikkerhetskopi)) er på plass; GRS hvis materialet oppleves som uerstattelig.
 
@@ -354,7 +366,8 @@ Alle endepunkter under `/api`. Skriveoperasjoner krever rollen `redaktoer`.
 | `PUT` | `/api/tilgang` | redaktør | Oppdater tilgangslisten |
 | `GET` | `/api/opptak` | redaktør | Opptaksregisteret, med hvilke verter det får peke på |
 | `PUT` | `/api/opptak` | redaktør | Oppdater registeret. ETag som på tilgangslisten |
-| `GET` | `/api/opptak/{id}` | familie | `302` til delingslenken i SharePoint, med eventuelt starttidspunkt. Svarer med en liten HTML-side ved feil, siden dette nås ved å klikke på en lenke |
+| `GET` | `/api/opptak-filer` | redaktør | Filene som ligger i `opptak`-containeren, med størrelse. Registersiden viser dem som en liste å velge fra |
+| `GET` | `/api/opptak/{id}` | familie | `302` til opptaket: en signert blob-adresse når det ligger i lageret, ellers delingslenken. Svarer med en liten HTML-side ved feil, siden dette nås ved å klikke på en lenke |
 | `GET` | `/api/opptak/{id}/{sekunder}` | familie | Samme, men til et bestemt tidspunkt. Adressen er tiden selv, ikke et scenenummer, så omrokkering av scenelisten ikke bryter lenker som alt står i en årstekst |
 
 At `/api/media/opplasting` tar en **liste** og ikke én fil er en liten detalj med stor
@@ -604,7 +617,7 @@ Tailwind — smakssak, ikke arkitektur.
 | `/rediger/nytt` | Opprett år: velg årstall, resten som over |
 | `/admin` | Vedlikehold: familiemedlemmer, sikkerhetskopier, opprydding, tømming |
 | `/tilgang` | Tilgangslisten: hvem som er med, og hvem som kan redigere |
-| `/opptak` | Registeret over fulle opptak som ligger i SharePoint |
+| `/opptak` | Registeret over fulle opptak: fil i lageret eller delingslenke |
 | `/logg-inn` | E-postadresse, deretter engangskode. Husker hvor du var på vei |
 
 ### Forsiden
@@ -682,9 +695,17 @@ er nær nok).
 hentet fra første bildefelt eller valgt manuelt, og avspilling med vanlig `<video>` mot
 en lese-SAS-URL. Blob støtter range-requests, så spoling virker.
 
-Opptak åpnes normalt som `?download=1#t=<sekunder>`: nettleseren får fila og spiller den
-selv. OneDrives viewer er et valg per opptak, for filer nettleseren ikke kan dekode — den
-transkoder underveis, men må laste en hel applikasjon før første bilde.
+Et fullt opptak ligger enten i `opptak`-containeren eller bak en delingslenke. Ligger det
+hos oss, signeres en adresse rett til bloben med `#t=<sekunder>` på slutten — seks timers
+levetid, så en lang film ikke stopper fordi signaturen gikk ut midt i. Ligger det i
+SharePoint, åpnes det normalt som `?download=1#t=<sekunder>`: nettleseren får fila og
+spiller den selv. OneDrives viewer er et valg per opptak, for filer nettleseren ikke kan
+dekode — den transkoder underveis, men må laste en hel applikasjon før første bilde.
+
+Den signerte adressen overstyrer `Content-Type` og `Content-Disposition`. Filene lastes
+opp med azcopy, som gjetter typen ut fra endelsen og noen ganger bommer; en `.mov` merket
+`application/octet-stream` ville blitt lastet ned i stedet for spilt av, og det er ikke
+noe appen kan rette uten å skrive om blobens metadata.
 
 Plakatvelgeren laster videoen med `crossOrigin`, ellers kan ikke bildet hentes ut av
 lerretet. Det gjør spolingen til et kryssopphav-kall med preflight, og derfor må CORS-reglene
@@ -776,12 +797,13 @@ oppdager tapet altfor sent.
 |---|---|
 | Static Web Apps, **gratisplanen** | 0 |
 | Blob Storage, ~50 GB Hot | ~1 |
+| Fulle opptak, ~90 GB Hot | ~2 |
 | Bildeoriginaler, ~11 GB Archive | ~0,02 |
 | Table Storage (koder, rate-limiting) | ~0 |
 | Resend, e-post (gratisnivå) | 0 |
 | Utgående trafikk (se under) | 0 |
 | Application Insights | ~0 (under gratiskvote) |
-| **Sum** | **~1 USD/mnd** |
+| **Sum** | **~3 USD/mnd** |
 
 Standard-planen er ikke lenger aktuell. Den trengtes bare til SWA-ens egen custom
 authentication og til å komme forbi taket på 25 inviterte brukere — og med egen
@@ -805,9 +827,14 @@ tar overforbruk til ~0,20 USD/GB). SWA-trafikken her er bare app-skallet og JSON
 titalls megabyte i måneden.
 
 Videotrafikken går i stedet på Azures utgående båndbredde, der **de første 100 GB per
-måned er gratis** for hele abonnementet. Til sammenligning: hele videokatalogen er ~30 GB,
-så det skal en del familiedugnad til for å passere. Skulle det skje, ligger prisen på
+måned er gratis** for hele abonnementet. De klippede videoene er ~30 GB til sammen, så
+der skal det en del familiedugnad til for å passere. De fulle opptakene er ~90 GB, og der
+er det lettere: én gjennomgang av arkivet er kvoten. Prisen over kvoten ligger på
 størrelsesorden 0,08–0,09 USD/GB — 300 GB i en måned ville kostet under 20 USD.
+
+Det er den ene posten SharePoint-veien ikke har: der betaler Microsoft-lisensen for
+trafikken. Avveiningen er mot avspilling som starter med én gang, og mot at scenelenker
+på iPad slipper innom OneDrive-appen.
 
 ### Overvåking
 

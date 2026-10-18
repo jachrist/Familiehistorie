@@ -13,7 +13,7 @@
 import sanitizeHtml from "sanitize-html";
 import { z } from "zod";
 import type { Feltskjema, Medieobjekt } from "../../delt/typer.js";
-import { ID_MONSTER, sjekkUrl } from "./opptak.js";
+import { ID_MONSTER, sjekkFil, sjekkUrl } from "./opptak.js";
 import { AAR_MAKS, AAR_MIN } from "./svar.js";
 
 /** Bevisst liten liste. Redigering skal ikke kunne produsere vilkårlig markup. */
@@ -204,6 +204,11 @@ export const tilgangslisteSkjema = z
  * Id-en havner i en URL og i årstekster, så den holdes bevisst kjedelig: små
  * bokstaver, tall og bindestrek. Da tåler den å bli skrevet av for hånd, limt
  * inn i en e-post og lest opp i telefonen.
+ *
+ * Hvert opptak har nøyaktig én kilde – en fil i vårt eget lager, eller en
+ * delingslenke. Begge deler ville latt det stå uavgjort hvilken av dem en
+ * scenelenke skal åpne, og den tvetydigheten er bedre å avvise enn å løse med
+ * en vilkårlig regel.
  */
 export const opptakSkjema = z.object({
   opptak: z
@@ -219,8 +224,20 @@ export const opptakSkjema = z.object({
           .string()
           .trim()
           .max(2000)
+          .optional()
           .superRefine((verdi, ctx) => {
+            if (!verdi) return;
             const svar = sjekkUrl(verdi);
+            if (!svar.ok) ctx.addIssue({ code: "custom", message: svar.grunn });
+          }),
+        fil: z
+          .string()
+          .trim()
+          .max(400)
+          .optional()
+          .superRefine((verdi, ctx) => {
+            if (!verdi) return;
+            const svar = sjekkFil(verdi);
             if (!svar.ok) ctx.addIssue({ code: "custom", message: svar.grunn });
           }),
         // Et døgn er rikelig, og hindrer at en tastefeil sender avspilleren til
@@ -240,6 +257,24 @@ export const opptakSkjema = z.object({
           .max(400)
           .optional(),
       })
+        .superRefine((o, ctx) => {
+          const navn = o.tittel || o.id || "Opptaket";
+          if (o.url && o.fil) {
+            ctx.addIssue({
+              code: "custom",
+              message: `«${navn}» har både en fil i lageret og en delingslenke. Velg én av dem.`,
+            });
+          } else if (!o.url && !o.fil) {
+            ctx.addIssue({
+              code: "custom",
+              message: `«${navn}» mangler kilde. Velg en fil i lageret, eller lim inn en delingslenke.`,
+            });
+          }
+        })
+        // Tomme felt lagres ikke. Ellers ville `url: ""` ligget igjen i
+        // registeret og gjort «har den en lenke?» til et spørsmål om tom
+        // streng, både her og i avspillingen.
+        .transform((o) => ({ ...o, url: o.url || undefined, fil: o.fil || undefined }))
     )
     .max(500)
     .superRefine((opptak, ctx) => {

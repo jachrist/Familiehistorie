@@ -171,8 +171,21 @@ export interface Opptak {
   /** Kortnavnet som står i lenken. Små bokstaver, tall og bindestrek. */
   id: string;
   tittel: string;
-  /** Delingslenken fra SharePoint. */
-  url: string;
+  /**
+   * Delingslenken fra SharePoint. Tom når opptaket ligger i `fil`.
+   *
+   * Ett opptak har enten en lenke eller en fil, aldri begge: ellers er det
+   * ikke avgjort hvilken av dem en scenelenke skal åpne.
+   */
+  url?: string;
+  /**
+   * Stien i vår egen `opptak`-container, for opptak som er lastet opp dit.
+   *
+   * Dette er den raske veien: nettleseren får videofila fra samme sted som
+   * resten av nettstedet, og en scenelenke går rett til tidspunktet uten at
+   * OneDrive-appen kommer i veien.
+   */
+  fil?: string;
   /** Sekunder inn i opptaket avspillingen skal starte. */
   start?: number | null;
   /** Fritekst til den som vedlikeholder registeret. Vises ingen andre steder. */
@@ -180,13 +193,22 @@ export interface Opptak {
   /** Scenene i opptaket. Settes inn som lenkeliste i en årstekst. */
   scener?: Scene[];
   /**
-   * Hvordan opptaket skal åpnes.
+   * Hvordan opptaket skal åpnes. Gjelder bare opptak med `url`.
    *
    * `direkte` (standard) gir nettleseren selve videofila, som starter på ett
    * trykk. `viewer` åpner OneDrives nettsted i stedet — tregere, men det
    * transkoder underveis og takler formater nettleseren ikke kan spille selv.
+   *
+   * Et opptak som ligger i `fil` har ingen viewer å falle tilbake på, og
+   * spilles alltid direkte.
    */
   avspilling?: "direkte" | "viewer" | null;
+}
+
+/** Én fil i opptak-containeren, slik registersiden lister dem. */
+export interface Opptaksfil {
+  sti: string;
+  bytes: number;
 }
 
 export interface Opptaksregister {

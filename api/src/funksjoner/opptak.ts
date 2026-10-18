@@ -1,6 +1,6 @@
 import { app, type HttpRequest, type HttpResponseInit } from "@azure/functions";
-import type { Opptaksregister } from "../../../delt/typer.js";
-import { CONTAINER, STI, lesJson, skrivJson } from "../lager.js";
+import type { Opptak, Opptaksregister } from "../../../delt/typer.js";
+import { CONTAINER, STI, blobFinnes, lesJson, listMedStorrelse, skrivJson } from "../lager.js";
 import { ID_MONSTER, avspillingsUrl, finnOpptak, tillatteVerter } from "../opptak.js";
 import { opptakSkjema } from "../skjema.js";
 import { feil, json } from "../svar.js";
@@ -20,6 +20,30 @@ app.http("opptakHent", {
       { opptak: lest?.verdi.opptak ?? [], etag: lest?.etag ?? "", verter: tillatteVerter() },
       { headers: lest?.etag ? { ETag: lest.etag } : {} }
     );
+  },
+});
+
+/**
+ * Filene som ligger i opptak-containeren.
+ *
+ * Registersiden trenger dem for å kunne vise en liste å velge fra. Å skrive
+ * stien for hånd ville vært en tastefeil som først ga seg til kjenne den dagen
+ * noen klikket på en scenelenke.
+ *
+ * Egen rute, ikke `opptak/filer`: den ville kollidert med `opptak/{id}`, og
+ * «filer» er en fullt lovlig opptaks-id.
+ */
+app.http("opptaksfiler", {
+  methods: ["GET"],
+  route: "opptak-filer",
+  authLevel: "anonymous",
+  handler: async (req: HttpRequest): Promise<HttpResponseInit> => {
+    const vakt = await krevRolle("redaktoer", req);
+    if (vakt.nektet) return vakt.nektet;
+
+    const filer = await listMedStorrelse(CONTAINER.opptak);
+    filer.sort((a, b) => a.sti.localeCompare(b.sti, "nb"));
+    return json({ filer });
   },
 });
 
@@ -91,28 +115,14 @@ app.http("opptakAapne", {
       return side(400, "Ugyldig lenke", "Adressen ser ikke ut som en opptakslenke.");
     }
 
-    const person = await innlogget(req);
-    if (!person || !harRolle(person, "familie")) {
-      return side(
-        401,
-        "Du må logge inn",
-        "Opptakene er private. Logg inn på Familiehistorie først, så virker lenken."
-      );
-    }
-
-    const opptak = await finnOpptak(id);
-    if (!opptak) {
-      return side(
-        404,
-        "Fant ikke opptaket",
-        "Lenken peker på et opptak som ikke står i registeret lenger. Si fra til den som vedlikeholder nettstedet."
-      );
-    }
+    const klar = await klargjor(req, id);
+    if ("svar" in klar) return klar.svar;
+    const { opptak } = klar;
 
     return {
       status: 302,
       headers: {
-        Location: avspillingsUrl(opptak, opptak.start),
+        Location: await avspillingsUrl(opptak, opptak.start),
         // Uten dette kan nettleseren huske omdirigeringen, og en byttet lenke
         // ville fortsatt sendt folk til den gamle.
         "Cache-Control": "no-store",
@@ -148,33 +158,66 @@ app.http("opptakScene", {
       return side(400, "Ugyldig lenke", "Tidspunktet ligger lenger ut enn et døgn.");
     }
 
-    const person = await innlogget(req);
-    if (!person || !harRolle(person, "familie")) {
-      return side(
-        401,
-        "Du må logge inn",
-        "Opptakene er private. Logg inn på Familiehistorie først, så virker lenken."
-      );
-    }
-
-    const opptak = await finnOpptak(id);
-    if (!opptak) {
-      return side(
-        404,
-        "Fant ikke opptaket",
-        "Lenken peker på et opptak som ikke står i registeret lenger. Si fra til den som vedlikeholder nettstedet."
-      );
-    }
+    const klar = await klargjor(req, id);
+    if ("svar" in klar) return klar.svar;
+    const { opptak } = klar;
 
     return {
       status: 302,
       headers: {
-        Location: avspillingsUrl(opptak, sekunder),
+        Location: await avspillingsUrl(opptak, sekunder),
         "Cache-Control": "no-store",
       },
     };
   },
 });
+
+/**
+ * Det begge omdirigeringene må gjøre før de kan sende noen videre.
+ *
+ * Sjekken på at fila finnes koster et hodeoppslag mot lageret, og er verdt
+ * det: uten den blir en fil som er flyttet eller omdøpt til en tom
+ * feilmelding fra Azure midt i en video, i stedet for en setning som sier hva
+ * som er galt.
+ */
+async function klargjor(
+  req: HttpRequest,
+  id: string
+): Promise<{ opptak: Opptak } | { svar: HttpResponseInit }> {
+  const person = await innlogget(req);
+  if (!person || !harRolle(person, "familie")) {
+    return {
+      svar: side(
+        401,
+        "Du må logge inn",
+        "Opptakene er private. Logg inn på Familiehistorie først, så virker lenken."
+      ),
+    };
+  }
+
+  const opptak = await finnOpptak(id);
+  if (!opptak) {
+    return {
+      svar: side(
+        404,
+        "Fant ikke opptaket",
+        "Lenken peker på et opptak som ikke står i registeret lenger. Si fra til den som vedlikeholder nettstedet."
+      ),
+    };
+  }
+
+  if (opptak.fil && !(await blobFinnes(CONTAINER.opptak, opptak.fil))) {
+    return {
+      svar: side(
+        404,
+        "Fant ikke filmen",
+        `Opptaket «${opptak.tittel}» står i registeret, men fila ligger ikke i lageret lenger. Si fra til den som vedlikeholder nettstedet.`
+      ),
+    };
+  }
+
+  return { opptak };
+}
 
 function side(status: number, tittel: string, tekst: string): HttpResponseInit {
   const html =

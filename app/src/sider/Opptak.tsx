@@ -1,22 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Opptak as Opptaksrad, Scene } from "../../../delt/typer.js";
+import type { Opptaksfil, Opptak as Opptaksrad, Scene } from "../../../delt/typer.js";
 import { Apifeil, api, noekler } from "../api/klient.js";
-import { formatterVarighet, lesTid } from "../format.js";
+import { formatterBytes, formatterVarighet, lesTid } from "../format.js";
 import { tolkSceneliste } from "../scener.js";
 
 /**
- * Registeret over opptak som ligger i SharePoint.
+ * Registeret over de fulle opptakene.
  *
- * Poenget er at delingslenken ikke skal stå i årsteksten. Der står
+ * Poenget er at adressen til filmen ikke skal stå i årsteksten. Der står
  * `/api/opptak/<id>`, og den korte lenken er det eneste et familiemedlem ser.
- * Byttes delingslenken, endres den her – ikke i hver årsside som nevner
- * opptaket.
+ * Flyttes filmen, endres det her – ikke i hver årsside som nevner opptaket.
  */
 export function Opptak() {
   const koe = useQueryClient();
   const tilstand = useQuery({ queryKey: noekler.opptak, queryFn: api.opptak });
+  const filer = useQuery({ queryKey: noekler.opptaksfiler, queryFn: api.opptaksfiler });
 
   const [rader, settRader] = useState<Opptaksrad[]>([]);
   const [etag, settEtag] = useState("");
@@ -87,9 +87,9 @@ export function Opptak() {
         </p>
         <h1>Opptak</h1>
         <p className="ingress">
-          Fulle opptak som ligger i SharePoint. Lim <code>/api/opptak/&lt;id&gt;</code>{" "}
-          inn som lenke i årsteksten – ikke selve delingslenken. Da ser bare
-          innloggede den, og den kan byttes ett sted.
+          De fulle opptakene. Lim <code>/api/opptak/&lt;id&gt;</code> inn som lenke i
+          årsteksten – ikke adressen til selve filmen. Da ser bare innloggede
+          den, og den kan byttes ett sted.
         </p>
       </header>
 
@@ -128,19 +128,13 @@ export function Opptak() {
                   />
                 </div>
 
-                <div className="opptaksfelt">
-                  <label className="felt-etikett" htmlFor={`url-${i}`}>
-                    Delingslenke fra SharePoint
-                  </label>
-                  <input
-                    id={`url-${i}`}
-                    className="inndata"
-                    inputMode="url"
-                    placeholder="https://…sharepoint.com/…"
-                    value={rad.url}
-                    onChange={(e) => endre(i, { url: e.target.value })}
-                  />
-                </div>
+                <Kildevelger
+                  rad={rad}
+                  indeks={i}
+                  filer={filer.data?.filer}
+                  henter={filer.isPending}
+                  onEndre={(del) => endre(i, del)}
+                />
 
                 <div className="opptaksrad-to">
                   <div className="opptaksfelt">
@@ -169,22 +163,6 @@ export function Opptak() {
                     />
                   </div>
                 </div>
-
-                <label className="admin-valg">
-                  <input
-                    type="checkbox"
-                    checked={rad.avspilling === "viewer"}
-                    onChange={(e) =>
-                      endre(i, { avspilling: e.target.checked ? "viewer" : "direkte" })
-                    }
-                  />{" "}
-                  Åpne i OneDrive-spilleren
-                </label>
-                <p className="felt-hjelp opptak-hjelp">
-                  Normalt spilles fila rett i nettleseren, som starter på ett trykk.
-                  Kryss av her hvis formatet ikke lar seg spille av — OneDrive
-                  transkoder underveis, men bruker lengre tid på å komme i gang.
-                </p>
 
                 <div className="opptaksfelt">
                   <label className="felt-etikett" htmlFor={`notat-${i}`}>
@@ -236,7 +214,7 @@ export function Opptak() {
               className="knapp-sekundaer"
               onClick={() => {
                 settEndret(true);
-                settRader((f) => [...f, { id: "", tittel: "", url: "", start: null, notat: "" }]);
+                settRader((f) => [...f, { id: "", tittel: "", start: null, notat: "" }]);
               }}
             >
               Legg til opptak
@@ -253,10 +231,10 @@ export function Opptak() {
           </div>
 
           <p className="beskjed-liten">
-            Lenken må peke på {tilstand.data.verter.join(" eller ")}. Skal den peke et
-            annet sted, må <code>OPPTAK_VERTER</code> utvides — endepunktet
-            omdirigerer fra vårt eget domene, og skal ikke kunne sende folk hvor
-            som helst.
+            En delingslenke må peke på {tilstand.data.verter.join(" eller ")}. Skal
+            den peke et annet sted, må <code>OPPTAK_VERTER</code> utvides —
+            endepunktet omdirigerer fra vårt eget domene, og skal ikke kunne sende
+            folk hvor som helst. Filer i lageret er ikke berørt av dette.
           </p>
 
           {lagre.isError && (
@@ -280,6 +258,132 @@ export function Opptak() {
         </>
       )}
     </main>
+  );
+}
+
+/**
+ * Hvor filmen ligger.
+ *
+ * To valg, ikke to felter man kan fylle begge: et opptak med både fil og
+ * delingslenke lar det stå uavgjort hvilken av dem en scenelenke skal åpne, og
+ * serveren avviser det. Da er det bedre at skjemaet ikke lar det oppstå.
+ *
+ * Fil i lageret står først fordi den er den raske: filmen kommer fra samme
+ * sted som resten av nettstedet, og en scenelenke lander på tidspunktet med én
+ * gang. Delingslenken går innom OneDrive, og på iPad er det noen trykk ekstra.
+ */
+function Kildevelger({
+  rad,
+  indeks,
+  filer,
+  henter,
+  onEndre,
+}: {
+  rad: Opptaksrad;
+  indeks: number;
+  filer: Opptaksfil[] | undefined;
+  henter: boolean;
+  onEndre: (del: Partial<Opptaksrad>) => void;
+}) {
+  // En rad uten noe av delene er ny, og da er lageret riktig forslag.
+  const lenke = Boolean(rad.url);
+
+  // Fila kan ha blitt flyttet eller omdøpt i lageret etter at den ble valgt.
+  // Da skal den fortsatt stå i nedtrekket – ellers ville det å åpne siden sett
+  // ut som om opptaket aldri hadde en fil.
+  const borte = Boolean(rad.fil) && filer !== undefined && !filer.some((f) => f.sti === rad.fil);
+
+  return (
+    <div className="opptaksfelt">
+      <span className="felt-etikett">Hvor ligger opptaket</span>
+
+      <div className="kildevalg">
+        <label className="admin-valg">
+          <input
+            type="radio"
+            name={`kilde-${indeks}`}
+            checked={!lenke}
+            onChange={() => onEndre({ url: undefined })}
+          />{" "}
+          Fil i lageret
+        </label>
+        <label className="admin-valg">
+          <input
+            type="radio"
+            name={`kilde-${indeks}`}
+            checked={lenke}
+            onChange={() => onEndre({ fil: undefined, url: rad.url ?? "" })}
+          />{" "}
+          Delingslenke fra SharePoint
+        </label>
+      </div>
+
+      {lenke ? (
+        <>
+          <label className="skjult" htmlFor={`url-${indeks}`}>
+            Delingslenke
+          </label>
+          <input
+            id={`url-${indeks}`}
+            className="inndata"
+            inputMode="url"
+            placeholder="https://…sharepoint.com/…"
+            value={rad.url ?? ""}
+            onChange={(e) => onEndre({ url: e.target.value })}
+          />
+
+          <label className="admin-valg">
+            <input
+              type="checkbox"
+              checked={rad.avspilling === "viewer"}
+              onChange={(e) => onEndre({ avspilling: e.target.checked ? "viewer" : "direkte" })}
+            />{" "}
+            Åpne i OneDrive-spilleren
+          </label>
+          <p className="felt-hjelp opptak-hjelp">
+            Normalt spilles fila rett i nettleseren, som starter på ett trykk.
+            Kryss av her hvis formatet ikke lar seg spille av — OneDrive
+            transkoder underveis, men bruker lengre tid på å komme i gang.
+          </p>
+        </>
+      ) : (
+        <>
+          <label className="skjult" htmlFor={`fil-${indeks}`}>
+            Fil i lageret
+          </label>
+          <select
+            id={`fil-${indeks}`}
+            className="inndata"
+            value={rad.fil ?? ""}
+            onChange={(e) => onEndre({ fil: e.target.value || undefined })}
+          >
+            <option value="">{henter ? "Henter filer …" : "— velg fil —"}</option>
+            {borte && <option value={rad.fil}>{rad.fil} (ligger ikke i lageret)</option>}
+            {(filer ?? []).map((f) => (
+              <option key={f.sti} value={f.sti}>
+                {f.sti} · {formatterBytes(f.bytes)}
+              </option>
+            ))}
+          </select>
+
+          {borte && (
+            <p className="felt-hjelp beskjed-merk">
+              Fila står i registeret, men ligger ikke i lageret lenger. Scenelenkene
+              til dette opptaket virker ikke før den er lastet opp igjen – eller en
+              annen fil er valgt.
+            </p>
+          )}
+
+          {!henter && (filer ?? []).length === 0 && (
+            <p className="felt-hjelp opptak-hjelp">
+              Ingen filer i lageret ennå. De lastes opp med <code>azcopy</code> – se
+              Opptak i KOM-I-GANG. Filene er for store til å gå gjennom
+              nettleseren.
+            </p>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
