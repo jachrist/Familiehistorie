@@ -492,6 +492,24 @@ I årsredigeringen, under «Hva skjedde», står **Sett inn sceneliste** for de
 opptakene som har scener for dette året. Den skriver inn en punktliste med én
 lenke per scene.
 
+### Hvordan opptaket åpnes
+
+Normalt får nettleseren selve videofila — `?download=1#t=<sekunder>` — og
+starter sin egen spiller på riktig sekund med ett trykk.
+
+Alternativet er OneDrives nettsted, som er en hel applikasjon: den må lastes,
+autentisere og slå opp delingstokenet før et eneste bilde vises. Merkbart
+tregere, særlig på iPad.
+
+Kryss av **«Åpne i OneDrive-spilleren»** på et opptak når den direkte veien
+ikke virker. Det skjer når nettleseren ikke kan dekode formatet selv — en
+gammel `.mov` eller `.wmv` — for OneDrive transkoder underveis.
+
+**To ting bryter den direkte veien:** hvis delingslenken har «blokker
+nedlasting» slått på, og hvis filen ikke er i et format nettleseren kjenner.
+Begge gir avspilling som ikke starter; begge løses med avkrysningsboksen eller
+ved å transkode filen.
+
 **Lenkene peker på tidspunktet, ikke på et scenenummer** — `/api/opptak/<id>/1992`.
 Omrokkerer du listen senere, fortsetter lenker som alt står i en årstekst å peke
 riktig sted.

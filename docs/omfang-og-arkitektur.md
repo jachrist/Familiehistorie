@@ -682,6 +682,10 @@ er nær nok).
 hentet fra første bildefelt eller valgt manuelt, og avspilling med vanlig `<video>` mot
 en lese-SAS-URL. Blob støtter range-requests, så spoling virker.
 
+Opptak åpnes normalt som `?download=1#t=<sekunder>`: nettleseren får fila og spiller den
+selv. OneDrives viewer er et valg per opptak, for filer nettleseren ikke kan dekode — den
+transkoder underveis, men må laste en hel applikasjon før første bilde.
+
 Plakatvelgeren laster videoen med `crossOrigin`, ellers kan ikke bildet hentes ut av
 lerretet. Det gjør spolingen til et kryssopphav-kall med preflight, og derfor må CORS-reglene
 på lagringskontoen slippe gjennom `Range` — uten det virker verken spoling eller

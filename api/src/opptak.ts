@@ -115,3 +115,62 @@ export async function finnOpptak(id: string): Promise<Opptak | undefined> {
   const register = await lesRegister();
   return register.opptak.find((o) => o.id === id);
 }
+
+/**
+ * Adressen som spiller av fila direkte, uten OneDrives nettsted.
+ *
+ * `?download=1` gir nettleseren selve videofila i stedet for å åpne viewer-en,
+ * og `#t=<sekunder>` er mediefragmentet nettleserens egen spiller forstår.
+ * Forskjellen er merkbar: viewer-en er en hel applikasjon som må lastes,
+ * autentisere og slå opp delingstokenet før et bilde vises. Dette er ett
+ * trykk.
+ *
+ * Prisen er at nettleseren må kunne dekode formatet selv. Transkodet H.264 i
+ * MP4 går overalt; en gammel .mov eller .wmv gjør det ikke, og da er viewer-en
+ * – som transkoder underveis – den som faktisk virker. Derfor kan hvert opptak
+ * velge.
+ *
+ * Krever også at delingslenken tillater nedlasting. Slås «blokker nedlasting»
+ * på i SharePoint, slutter dette å virke.
+ */
+export function direkteUrl(raa: string, sekunder?: number | null): string {
+  let url: URL;
+  try {
+    url = new URL(raa);
+  } catch {
+    return raa;
+  }
+
+  // Et starttidspunkt kan ligge i `nav` fra SharePoints egen delingsdialog.
+  // Den parameteren betyr ingenting uten viewer-en, så tiden hentes ut og
+  // settes som mediefragment i stedet for å gå tapt.
+  const fraNav = sekunder ?? startFraNav(url.searchParams.get("nav"));
+  url.searchParams.delete("nav");
+  url.searchParams.set("download", "1");
+
+  const uten = url.toString().split("#")[0]!;
+  return fraNav && fraNav > 0 ? `${uten}#t=${Math.round(fraNav)}` : uten;
+}
+
+function startFraNav(nav: string | null): number | undefined {
+  if (!nav) return undefined;
+  try {
+    const tolket = JSON.parse(Buffer.from(nav, "base64").toString("utf8")) as {
+      playbackOptions?: { startTimeInSeconds?: number };
+    };
+    const sek = tolket.playbackOptions?.startTimeInSeconds;
+    return typeof sek === "number" && sek > 0 ? sek : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Velger form etter opptakets innstilling. `direkte` er standard. */
+export function avspillingsUrl(
+  opptak: { url: string; avspilling?: "direkte" | "viewer" | null },
+  sekunder?: number | null
+): string {
+  return opptak.avspilling === "viewer"
+    ? medStarttid(opptak.url, sekunder, sekunder !== undefined && sekunder !== null)
+    : direkteUrl(opptak.url, sekunder);
+}

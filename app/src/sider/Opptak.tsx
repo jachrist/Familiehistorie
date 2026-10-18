@@ -170,6 +170,22 @@ export function Opptak() {
                   </div>
                 </div>
 
+                <label className="admin-valg">
+                  <input
+                    type="checkbox"
+                    checked={rad.avspilling === "viewer"}
+                    onChange={(e) =>
+                      endre(i, { avspilling: e.target.checked ? "viewer" : "direkte" })
+                    }
+                  />{" "}
+                  Åpne i OneDrive-spilleren
+                </label>
+                <p className="felt-hjelp opptak-hjelp">
+                  Normalt spilles fila rett i nettleseren, som starter på ett trykk.
+                  Kryss av her hvis formatet ikke lar seg spille av — OneDrive
+                  transkoder underveis, men bruker lengre tid på å komme i gang.
+                </p>
+
                 <div className="opptaksfelt">
                   <label className="felt-etikett" htmlFor={`notat-${i}`}>
                     Notat (vises ingen andre steder)

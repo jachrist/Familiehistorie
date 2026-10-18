@@ -1,7 +1,7 @@
 import { app, type HttpRequest, type HttpResponseInit } from "@azure/functions";
 import type { Opptaksregister } from "../../../delt/typer.js";
 import { CONTAINER, STI, lesJson, skrivJson } from "../lager.js";
-import { ID_MONSTER, finnOpptak, medStarttid, tillatteVerter } from "../opptak.js";
+import { ID_MONSTER, avspillingsUrl, finnOpptak, tillatteVerter } from "../opptak.js";
 import { opptakSkjema } from "../skjema.js";
 import { feil, json } from "../svar.js";
 import { harRolle } from "../tilgang.js";
@@ -112,7 +112,7 @@ app.http("opptakAapne", {
     return {
       status: 302,
       headers: {
-        Location: medStarttid(opptak.url, opptak.start),
+        Location: avspillingsUrl(opptak, opptak.start),
         // Uten dette kan nettleseren huske omdirigeringen, og en byttet lenke
         // ville fortsatt sendt folk til den gamle.
         "Cache-Control": "no-store",
@@ -169,7 +169,7 @@ app.http("opptakScene", {
     return {
       status: 302,
       headers: {
-        Location: medStarttid(opptak.url, sekunder, true),
+        Location: avspillingsUrl(opptak, sekunder),
         "Cache-Control": "no-store",
       },
     };

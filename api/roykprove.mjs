@@ -301,20 +301,14 @@ const videre = await proev("GET /api/opptak/{id} som familie → 302", 302, () =
   finn("GET", "opptak/{id}").handler(req({ params: { id: "bryllupet-1963" }, som: "familie" })));
 const maal = String(videre.headers?.Location ?? "");
 console.log(`         → ${maal}`);
-const harStart = maal.includes("nav=");
-console.log(`  ${harStart ? "ok  " : "FEIL"}  ${"Starttidspunkt lagt paa lenken".padEnd(46)}`);
-if (!harStart) feilet++;
-if (harStart) {
-  const nav = JSON.parse(Buffer.from(decodeURIComponent(new URL(maal).searchParams.get("nav")), "base64").toString("utf8"));
-  const riktig = nav?.playbackOptions?.startTimeInSeconds === 83;
-  console.log(`  ${riktig ? "ok  " : "FEIL"}  ${"nav peker paa 83 sekunder".padEnd(46)}`);
-  if (!riktig) feilet++;
-}
+const harStart = maal.includes("download=1") && maal.endsWith("#t=83");
+console.log(`  ${harStart ? "ok  " : "FEIL"}  ${"Starttidspunkt blir mediefragment".padEnd(46)}`);
+if (!harStart) { feilet++; console.log("         →", maal); }
 
 const uten = await finn("GET", "opptak/{id}").handler(req({ params: { id: "hytta" }, som: "familie" }));
-const urort = uten.headers?.Location === "https://mqx.sharepoint.com/:v:/g/def";
-console.log(`  ${urort ? "ok  " : "FEIL"}  ${"Uten start staar lenken uroert".padEnd(46)}`);
-if (!urort) feilet++;
+const urort = uten.headers?.Location === "https://mqx.sharepoint.com/:v:/g/def?download=1";
+console.log(`  ${urort ? "ok  " : "FEIL"}  ${"Uten start: ingen #t paa lenken".padEnd(46)}`);
+if (!urort) { feilet++; console.log("         →", uten.headers?.Location); }
 
 await proev("GET /api/opptak/{id} som ikke finnes → 404", 404, () =>
   finn("GET", "opptak/{id}").handler(req({ params: { id: "finnes-ikke" }, som: "familie" })));
@@ -370,7 +364,8 @@ const MED_SCENER = { opptak: [
     { start: 1992, tittel: "Julespill paa Roenningen", aar: 1988 },
   ] },
   // Lenken baerer alt et tidspunkt fra SharePoints egen delingsdialog.
-  { id: "med-nav", tittel: "Med innebygd tid", url: "https://mqx.sharepoint.com/:v:/g/x?nav=eyJhIjoxfQ==" },
+  // Viewer-form med vilje: det er den som bruker nav-parameteren.
+  { id: "med-nav", tittel: "Med innebygd tid", url: "https://mqx.sharepoint.com/:v:/g/x?nav=eyJhIjoxfQ==", avspilling: "viewer" },
 ]};
 const scenereg = await finn("GET", "opptak").handler(req({}));
 await proev("PUT opptak med scener", 200, () =>
@@ -382,8 +377,9 @@ const navTid = (m) => {
   const p = new URL(String(m)).searchParams.get("nav");
   return p ? JSON.parse(Buffer.from(decodeURIComponent(p), "base64").toString("utf8"))?.playbackOptions?.startTimeInSeconds : undefined;
 };
-const traff = navTid(scene.headers?.Location) === 764;
-console.log(`  ${traff ? "ok  " : "FEIL"}  ${"Scenelenken peker paa 12:44".padEnd(46)}`);
+const fragmenttid = (m) => Number(/#t=(\d+)$/.exec(String(m))?.[1]);
+const traff = fragmenttid(scene.headers?.Location) === 764 && String(scene.headers?.Location).includes("download=1");
+console.log(`  ${traff ? "ok  " : "FEIL"}  ${"Scenelenken spiller direkte fra 12:44".padEnd(46)}`);
 if (!traff) { feilet++; console.log("         →", scene.headers?.Location); }
 
 // En innebygd nav i delingslenken maa vike for scenens tidspunkt, ellers
@@ -407,6 +403,46 @@ await proev("GET scenelenke lenger ut enn et doegn → 400", 400, () =>
   finn("GET", "opptak/{id}/{sekunder}").handler(req({ params: { id: "jul-1987", sekunder: "99999" }, som: "familie" })));
 await proev("PUT opptak med scene uten tittel → 422", 422, () =>
   finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": '"0x8DFEIL"' }, body: { opptak: [{ id: "x", tittel: "X", url: "https://mqx.sharepoint.com/x", scener: [{ start: 5, tittel: "" }] }] } })));
+
+console.log("\nAvspillingsform");
+// Delingslenken aapner OneDrives nettsted, som er en hel applikasjon. Direkte
+// form gir nettleseren fila og starter paa ett trykk.
+const FORMER = { opptak: [
+  { id: "direkte", tittel: "Direkte", url: "https://mqx.sharepoint.com/:v:/g/dir?e=Ab1" },
+  { id: "viewer", tittel: "Viewer", url: "https://mqx.sharepoint.com/:v:/g/vw?e=Ab1", avspilling: "viewer" },
+  { id: "arvet-tid", tittel: "Med nav fra delingsdialogen", url: "https://mqx.sharepoint.com/:v:/g/n?nav=eyJwbGF5YmFja09wdGlvbnMiOnsic3RhcnRUaW1lSW5TZWNvbmRzIjo5MH19" },
+]};
+const formreg = await finn("GET", "opptak").handler(req({}));
+await proev("PUT opptak med avspillingsform", 200, () =>
+  finn("PUT", "opptak").handler(req({ method: "PUT", headers: { ...JSONH, "if-match": formreg.jsonBody.etag }, body: FORMER })));
+
+const sted = async (id, sek) => {
+  const r = sek === undefined
+    ? await finn("GET", "opptak/{id}").handler(req({ params: { id }, som: "familie" }))
+    : await finn("GET", "opptak/{id}/{sekunder}").handler(req({ params: { id, sekunder: String(sek) }, som: "familie" }));
+  return String(r.headers?.Location ?? "");
+};
+
+const d = await sted("direkte", 2260);
+const direkteOk = d.includes("download=1") && d.endsWith("#t=2260") && !d.includes("nav=");
+console.log(`  ${direkteOk ? "ok  " : "FEIL"}  ${"Scene: download=1 og #t=2260".padEnd(46)}`);
+if (!direkteOk) { feilet++; console.log("         →", d); }
+
+const v = await sted("viewer", 2260);
+const viewerOk = v.includes("nav=") && !v.includes("download=1");
+console.log(`  ${viewerOk ? "ok  " : "FEIL"}  ${"Viewer-valget beholder nav-formen".padEnd(46)}`);
+if (!viewerOk) { feilet++; console.log("         →", v); }
+
+// En tid fra delingsdialogen skal ikke gaa tapt naar nav kastes.
+const a = await sted("arvet-tid");
+const arvetOk = a.includes("download=1") && a.endsWith("#t=90") && !a.includes("nav=");
+console.log(`  ${arvetOk ? "ok  " : "FEIL"}  ${"Tid fra nav blir til #t naar den kastes".padEnd(46)}`);
+if (!arvetOk) { feilet++; console.log("         →", a); }
+
+const h = await sted("direkte");
+const helOk = h.includes("download=1") && !h.includes("#t=");
+console.log(`  ${helOk ? "ok  " : "FEIL"}  ${"Hele videoen: ingen #t naar start mangler".padEnd(46)}`);
+if (!helOk) { feilet++; console.log("         →", h); }
 
 console.log("\nCORS paa lagringskontoen");
 // Opplastingen gaar direkte fra nettleseren til Blob. Staar ikke nettstedets

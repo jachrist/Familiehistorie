@@ -227,6 +227,7 @@ export const opptakSkjema = z.object({
         // et tidspunkt som ikke finnes.
         start: z.number().int().min(0).max(86_400).nullish(),
         notat: z.string().trim().max(500).optional(),
+        avspilling: z.enum(["direkte", "viewer"]).nullish(),
         scener: z
           .array(
             z.object({

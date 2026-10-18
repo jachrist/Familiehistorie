@@ -179,6 +179,14 @@ export interface Opptak {
   notat?: string;
   /** Scenene i opptaket. Settes inn som lenkeliste i en årstekst. */
   scener?: Scene[];
+  /**
+   * Hvordan opptaket skal åpnes.
+   *
+   * `direkte` (standard) gir nettleseren selve videofila, som starter på ett
+   * trykk. `viewer` åpner OneDrives nettsted i stedet — tregere, men det
+   * transkoder underveis og takler formater nettleseren ikke kan spille selv.
+   */
+  avspilling?: "direkte" | "viewer" | null;
 }
 
 export interface Opptaksregister {
