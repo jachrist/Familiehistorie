@@ -470,6 +470,13 @@ kjøres om igjen uten å sende det samme to ganger.
    nytt — se `infra/LES-MEG.md`, som også sier hvorfor `tillatteOpphav` må være
    med på den kommandoen.
 
+**For én og én fil er portalen enklere.** Lagringskontoen → *Storage browser* →
+*Blob containers* → `opptak` → **Upload**. Du er alt autentisert, så ingen SAS
+trengs. Under *Advanced* står **Upload to folder** — skriv `1987` der, ellers
+havner filen i rota og stien i registeret blir en annen enn du tror.
+
+Resten her gjelder azcopy, som er verktøyet når det er mange filer.
+
 1. **Lag en SAS for containeren.** I Azure-portalen: lagringskontoen →
    *Storage browser* → *Blob containers* → `opptak` → *Shared access tokens*.
    Kryss av **Read**, **Add**, **Create**, **Write** og **List**, sett utløp et
@@ -493,8 +500,17 @@ kjøres om igjen uten å sende det samme to ganger.
    Mappestrukturen under `E:\Opptak` følger med, så `1987\Jul.mp4` havner som
    `1987/Jul.mp4` i containeren og står slik i nedtrekket i registeret.
 
-3. **Velg filen** i registeret under *Hvor ligger opptaket → Fil i lageret*.
-   Nedtrekket viser det som faktisk ligger der, med størrelse.
+3. **Velg filen** i registeret under *Hvor ligger opptaket → Fil i lageret*,
+   og **lagre registeret**. Nedtrekket viser det som faktisk ligger der, med
+   størrelse.
+
+   Dette steget er lett å hoppe over for et opptak som alt står i registeret
+   med en delingslenke. Opplastingen flytter ingenting av seg selv —
+   omdirigeringen leser bare hva som står i registeret, og fram til raden er
+   byttet om, går lenken til SharePoint som før. Står du i tvil om hvilken som
+   er i bruk: åpne `/api/opptak/<id>` i en nettleser på PC-en og se på
+   adressefeltet etterpå. `blob.core.windows.net` er fila, `sharepoint.com` er
+   lenken.
 
 **Les fra en lokal disk, ikke fra OneDrive.** Ligger kildefilene i et
 OneDrive-bibliotek, må de hentes ned før azcopy kan sende dem — og da går hele
