@@ -475,20 +475,39 @@ kjøres om igjen uten å sende det samme to ganger.
    Kryss av **Read**, **Add**, **Create**, **Write** og **List**, sett utløp et
    stykke fram i tid, og kopier *Blob SAS URL*.
 
-2. **Kjør opplastingen.** `sync` laster opp det som mangler, og hopper over det
-   som alt ligger der — den tåler å bli avbrutt og startet på nytt.
+2. **Kjør opplastingen.** Én film om gangen, etter hvert som du lager
+   sceneliste for den:
 
    ```powershell
-   azcopy sync "D:\Opptak" "https://<konto>.blob.core.windows.net/opptak?<sas>" --recursive
+   azcopy copy "E:\Opptak\1987\Jul.mp4" "https://<konto>.blob.core.windows.net/opptak/1987/Jul.mp4?<sas>"
    ```
 
-   Mappestrukturen under `D:\Opptak` følger med, så `1987\Jul.mp4` havner som
+   Eller hele treet på én gang, hvis du heller vil ha det unnagjort. `sync`
+   hopper over det som alt ligger der, så den tåler å bli avbrutt og startet
+   på nytt:
+
+   ```powershell
+   azcopy sync "E:\Opptak" "https://<konto>.blob.core.windows.net/opptak?<sas>" --recursive
+   ```
+
+   Mappestrukturen under `E:\Opptak` følger med, så `1987\Jul.mp4` havner som
    `1987/Jul.mp4` i containeren og står slik i nedtrekket i registeret.
 
 3. **Velg filen** i registeret under *Hvor ligger opptaket → Fil i lageret*.
    Nedtrekket viser det som faktisk ligger der, med størrelse.
 
-Tre ting verdt å vite:
+**Les fra en lokal disk, ikke fra OneDrive.** Ligger kildefilene i et
+OneDrive-bibliotek, må de hentes ned før azcopy kan sende dem — og da går hele
+arkivet gjennom hjemmelinjen to ganger. En ekstern SSD med kopier av filmene
+gjør opplastingen til ett hopp, og er den klart enkleste veien. (Power Automate
+er ikke et alternativ: Azure Blob-koblingen tar 50 MB, eller 1 GB med chunking
+slått på, og stopper der.)
+
+Fire ting verdt å vite:
+
+- **SAS-en utløper.** Laster du opp én film av gangen over uker, kommer dagen
+  da azcopy svarer «Server failed to authenticate the request». Da er det ikke
+  noe i stykker — tokenet er bare gått ut. Lag et nytt i portalen.
 
 - **Innholdstypen rettes opp underveis.** Setter azcopy `application/octet-stream`
   på en `.mov`, ville nettleseren lastet filen ned i stedet for å spille den.
