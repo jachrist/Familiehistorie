@@ -1,10 +1,11 @@
 # Kom i gang
 
-Status: **fase 1, trinn 1–8** av [faseplanen](docs/omfang-og-arkitektur.md#14-faseplan).
+Status: **fase 1 er ferdig** — trinn 1–11 av
+[faseplanen](docs/omfang-og-arkitektur.md#14-faseplan).
 
-> **Nettstedet har ingen innlogging ennå.** Den kommer i trinn 9. Alt som legges
-> inn før den er på plass, er lesbart for enhver som finner adressen. Ikke last
-> opp ekte familiebilder ennå.
+> **Nettstedet krever innlogging.** Engangskode på e-post, og bare adressene som
+> står i tilgangslisten slipper inn. Media hentes med kortlevde adresser, og den
+> som ikke er logget inn ser ingenting.
 
 ## Hent koden
 
