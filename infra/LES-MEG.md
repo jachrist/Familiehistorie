@@ -105,6 +105,17 @@ az deployment group create \
 står kontoen igjen uten CORS-regler og opplasting fra nettleseren slutter å
 virke.
 
+**Fra PowerShell på Windows** må de indre anførselstegnene escapes, ellers når
+de aldri fram til `az` og du får «Failed to parse string as JSON»:
+
+```powershell
+--parameters prefiks=<prefiks> tillatteOpphav='[\"https://<swa-navn>.azurestaticapps.net\",\"https://<ditt-domene>\"]'
+```
+
+Holder det ikke, legg parameterne i en JSON-fil og bruk `--parameters
+'@parametre.json'`. Da er det ingen anførselstegn å miste, og listen er lettere
+å redigere neste gang.
+
 ## Utrulling når appen ble opprettet frakoblet
 
 Ble `opprett.sh` kjørt uten `GITHUB_TOKEN`, står Static Web App-en med
@@ -436,6 +447,17 @@ az deployment group create \
   --parameters prefiks=<prefiks> \
     tillatteOpphav='["https://<swa-navn>.azurestaticapps.net","https://historie.mqx.no"]'
 ```
+
+**Fra PowerShell på Windows** må de indre anførselstegnene escapes, ellers når
+de aldri fram til `az` og du får «Failed to parse string as JSON»:
+
+```powershell
+--parameters prefiks=<prefiks> tillatteOpphav='[\"https://<swa-navn>.azurestaticapps.net\",\"https://<ditt-domene>\"]'
+```
+
+Holder det ikke, legg parameterne i en JSON-fil og bruk `--parameters
+'@parametre.json'`. Da er det ingen anførselstegn å miste, og listen er lettere
+å redigere neste gang.
 
 Endringen slår inn med en gang. Nettleseren kan ha husket et avvist
 preflight-svar i inntil en time, så last siden på nytt med tømt buffer hvis den
